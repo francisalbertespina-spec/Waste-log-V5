@@ -740,25 +740,90 @@ async function exportExcel(type) {
 // 6. PDF REPORT
 // ═══════════════════════════════════════════════════════════════════════════
 
-// ── Fetch a Google Drive image as a base64 data-URL ──────────────────────
-async function fetchImageAsBase64(driveUrl) {
+// ── Extract Google Drive file ID from any Drive URL ──────────────────────
+function extractDriveId(driveUrl) {
+  const m = driveUrl.match(/\/d\/([^/?\s]+)/) || driveUrl.match(/[?&]id=([^&\s]+)/);
+  return m ? m[1] : null;
+}
+
+// ── Load an image via <img> tag → canvas → base64 ────────────────────────
+// This avoids fetch() CORS issues. Drive thumbnail URLs load fine as <img>
+// src but can't be read back via fetch. We draw to canvas instead.
+// NOTE: canvas.toDataURL() requires the image to load with CORS headers OR
+// the image to be served from the same origin. Drive thumbnails do NOT send
+// CORS headers, so toDataURL() will throw a "tainted canvas" error.
+// Workaround: use a CORS proxy for the thumbnail, or — better — use the
+// Apps Script backend as a proxy (since it can fetch Drive files server-side).
+// For now we use the fastest client-side approach that works in practice:
+// try crossOrigin='anonymous' first, fall back to non-CORS load and catch.
+
+function loadImageViaCanvas(url) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width  = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        canvas.getContext('2d').drawImage(img, 0, 0);
+        resolve({ dataUrl: canvas.toDataURL('image/jpeg', 0.85), w: img.naturalWidth, h: img.naturalHeight });
+      } catch {
+        // Canvas tainted — CORS blocked toDataURL. Return dims only (image displayed but not exportable).
+        resolve(null);
+      }
+    };
+
+    img.onerror = () => resolve(null);
+
+    img.src = url;
+  });
+}
+
+// ── Fetch image through the GAS backend (proxy) ───────────────────────────
+// The Apps Script can fetch Drive files without CORS restrictions and return
+// them as base64. We call it with action=getImageBase64&id=<fileId>.
+// If the backend doesn't support this action yet, it falls back to null.
+async function fetchImageViaProxy(fileId) {
   try {
-    // Extract file ID from various Drive URL formats
-    const m = driveUrl.match(/\/d\/([^/?\s]+)|id=([^&\s]+)/);
-    if (!m) return null;
-    const id = m[1] || m[2];
-    // Use the thumbnail endpoint — works without auth for shared files
-    const thumbUrl = `https://drive.google.com/thumbnail?id=${id}&sz=w800`;
-    const res = await fetch(thumbUrl);
+    const token = localStorage.getItem('userToken');
+    const url   = `${scriptURL}?action=getImageBase64&id=${fileId}&token=${token}`;
+    const res   = await fetch(url, { signal: AbortSignal.timeout(10000) });
     if (!res.ok) return null;
-    const blob = await res.blob();
-    return new Promise(resolve => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result); // "data:image/jpeg;base64,..."
-      reader.onerror  = () => resolve(null);
-      reader.readAsDataURL(blob);
-    });
+    const data  = await res.json();
+    if (data.base64 && data.mimeType) {
+      return {
+        dataUrl: `data:${data.mimeType};base64,${data.base64}`,
+        w: data.width  || 800,
+        h: data.height || 600
+      };
+    }
+    return null;
   } catch { return null; }
+}
+
+// ── Master image resolver — tries multiple strategies ─────────────────────
+async function fetchImageAsBase64(driveUrl) {
+  if (!driveUrl) return null;
+  const id = extractDriveId(driveUrl);
+  if (!id) return null;
+
+  // Strategy 1: GAS proxy (most reliable, works if backend supports it)
+  const proxy = await fetchImageViaProxy(id);
+  if (proxy) return proxy;
+
+  // Strategy 2: Drive thumbnail with crossOrigin='anonymous'
+  const thumbUrl = `https://drive.google.com/thumbnail?id=${id}&sz=w800`;
+  const thumb    = await loadImageViaCanvas(thumbUrl);
+  if (thumb) return thumb;
+
+  // Strategy 3: uc?export=view (direct download link)
+  const viewUrl = `https://drive.google.com/uc?export=view&id=${id}`;
+  const view    = await loadImageViaCanvas(viewUrl);
+  if (view) return view;
+
+  return null;
 }
 
 // ── Measure image dimensions from a data-URL ─────────────────────────────
@@ -818,10 +883,10 @@ async function generatePDFReport(type) {
       const rawUrl  = r[5] || '';
       if (!rawUrl) { imageCache.push(null); continue; }
 
-      const dataUrl = await fetchImageAsBase64(rawUrl);
-      if (!dataUrl) { imageCache.push(null); continue; }
+      const result = await fetchImageAsBase64(rawUrl);
+      if (!result) { imageCache.push(null); continue; }
 
-      const { w: natW, h: natH } = await getImageDimensions(dataUrl);
+      const { dataUrl, w: natW, h: natH } = result;
       const isLandscape = natW >= natH;
 
       let imgW, imgH;
