@@ -740,42 +740,249 @@ async function exportExcel(type) {
 // 6. PDF REPORT
 // ═══════════════════════════════════════════════════════════════════════════
 
-async function generatePDFReport(type) {
-  const rows=type==='hazardous'?window.loadedHazardousRows:window.loadedSolidRows;
-  if(!rows||rows.length<=1){showToast("No data for PDF","error");return;}
-  const btn=document.getElementById(`${type}-pdfBtn`);
-  if(btn){btn.disabled=true;btn.textContent='Generating…';}
+// ── Fetch a Google Drive image as a base64 data-URL ──────────────────────
+async function fetchImageAsBase64(driveUrl) {
   try {
-    const{jsPDF}=window.jspdf, doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-    const pw=doc.internal.pageSize.getWidth(),ph=doc.internal.pageSize.getHeight(),m=15,cw=pw-m*2;
-    doc.setFillColor(211,47,47);doc.rect(0,0,pw,40,'F');
-    doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(17);doc.text('HDJV Waste Management System',m,15);
-    doc.setFontSize(10);doc.setFont('helvetica','normal');doc.text(`${type==='hazardous'?'Hazardous':'Solid'} Waste Report — Package ${selectedPackage.replace('P','')}`,m,24);
-    doc.setFontSize(8);doc.text(`Generated: ${new Date().toLocaleString()}`,m,32);
-    const dr=rows.slice(1); let tv=0; const wc={};
-    dr.forEach(r=>{tv+=type==='hazardous'?parseFloat(r[1])||0:1;wc[r[2]||'Unknown']=(wc[r[2]||'Unknown']||0)+1;});
-    const tw=Object.entries(wc).sort((a,b)=>b[1]-a[1])[0];
-    doc.setFillColor(249,249,249);doc.setDrawColor(230,230,230);doc.roundedRect(m,47,cw,26,3,3,'FD');
-    [[`TOTAL ENTRIES`,String(dr.length)],[type==='hazardous'?'VOLUME (kg)':'ENTRIES',type==='hazardous'?tv.toFixed(2):String(dr.length)],['TOP WASTE',tw?tw[0].slice(0,20):'—']].forEach(([lbl,val],i)=>{
-      const x=m+i*(cw/3)+8; doc.setFontSize(7);doc.setFont('helvetica','bold');doc.setTextColor(120,120,120);doc.text(lbl,x,55);
-      doc.setFontSize(12);doc.setTextColor(211,47,47);doc.text(val,x,65);
+    // Extract file ID from various Drive URL formats
+    const m = driveUrl.match(/\/d\/([^/?\s]+)|id=([^&\s]+)/);
+    if (!m) return null;
+    const id = m[1] || m[2];
+    // Use the thumbnail endpoint — works without auth for shared files
+    const thumbUrl = `https://drive.google.com/thumbnail?id=${id}&sz=w800`;
+    const res = await fetch(thumbUrl);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result); // "data:image/jpeg;base64,..."
+      reader.onerror  = () => resolve(null);
+      reader.readAsDataURL(blob);
     });
-    let y=84; const cols=[34,24,66,42], hdrs=type==='hazardous'?['Date','Volume (kg)','Waste Type','Logged By']:['Date','Location','Waste Type','Logged By'];
-    doc.setFillColor(211,47,47);doc.rect(m,y,cw,8,'F');doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(8);
-    let xp=m+2;hdrs.forEach((h,i)=>{doc.text(h,xp,y+5.5);xp+=cols[i];});y+=8;doc.setFont('helvetica','normal');
-    dr.forEach((r,idx)=>{
-      if(y>ph-20){doc.addPage();y=20;doc.setFillColor(211,47,47);doc.rect(m,y,cw,8,'F');doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(8);let xh=m+2;hdrs.forEach((h,i)=>{doc.text(h,xh,y+5.5);xh+=cols[i];});doc.setFont('helvetica','normal');y+=8;}
-      doc.setFillColor(idx%2===0?255:248,idx%2===0?255:248,idx%2===0?255:250);doc.rect(m,y,cw,7,'F');
-      doc.setDrawColor(240,240,240);doc.line(m,y+7,m+cw,y+7);doc.setTextColor(50,50,50);doc.setFontSize(8);
-      const row=[new Date(r[0]).toLocaleDateString("en-US",{year:'numeric',month:'short',day:'numeric'}),String(r[1]||''),String(r[2]||''),String(r[4]||'')];
-      let xr=m+2;row.forEach((c,i)=>{doc.text(c.length>24?c.slice(0,22)+'…':c,xr,y+4.8);xr+=cols[i];});y+=7;
+  } catch { return null; }
+}
+
+// ── Measure image dimensions from a data-URL ─────────────────────────────
+function getImageDimensions(dataUrl) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload  = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+    img.onerror = () => resolve({ w: 1, h: 1 });
+    img.src = dataUrl;
+  });
+}
+
+// ── Main PDF generator ────────────────────────────────────────────────────
+async function generatePDFReport(type) {
+  const rows = type === 'hazardous' ? window.loadedHazardousRows : window.loadedSolidRows;
+  if (!rows || rows.length <= 1) { showToast("No data for PDF", "error"); return; }
+
+  const btn = document.getElementById(`${type}-pdfBtn`);
+  if (btn) { btn.disabled = true; btn.textContent = 'Generating…'; }
+
+  // Show a persistent toast while images are being fetched
+  showToast('Fetching images… this may take a moment', 'info', { persistent: true, spinner: true });
+
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pw = doc.internal.pageSize.getWidth();   // 210 mm
+    const ph = doc.internal.pageSize.getHeight();  // 297 mm
+    const m  = 15;                                  // margin
+    const cw = pw - m * 2;                          // content width = 180 mm
+
+    // ── Column layout ─────────────────────────────────────────────────────
+    // Date | Vol/Loc | Waste | Logged By | Photo
+    // widths in mm: 30, 22, 52, 36, 40  (total = 180)
+    const cols = [30, 22, 52, 36, 40];
+    const hdrs = type === 'hazardous'
+      ? ['Date', 'Vol (kg)', 'Waste Type', 'Logged By', 'Photo']
+      : ['Date', 'Location', 'Waste Type', 'Logged By', 'Photo'];
+
+    // Photo cell size: 3.5" × 2" landscape or 2" × 3.5" portrait (1 inch = 25.4 mm)
+    // We auto-detect per image and fit inside the cell:
+    //   cell width  = cols[4] mm = 40 mm ≈ 1.57" — we'll use it as max width
+    //   cell height = row height — driven by image
+    // Target: if image is landscape → render at 40mm wide, height = 40*(2/3.5) ≈ 22.9mm
+    //         if image is portrait  → render at 40mm wide, height = 40*(3.5/2) = 70mm
+    // We cap portrait at 60mm so rows stay manageable.
+    const IMG_W       = cols[4] - 2;   // mm, image width inside cell (38mm)
+    const ROW_H_TEXT  = 9;             // mm, row height when no image / failed image
+    const ROW_PAD     = 2;             // mm, padding inside image row
+
+    // ─── Pre-fetch all images ─────────────────────────────────────────────
+    const dr = rows.slice(1);
+    const imageCache = []; // per-row: { dataUrl, imgW, imgH, rowH } or null
+
+    for (let i = 0; i < dr.length; i++) {
+      const r       = dr[i];
+      const rawUrl  = r[5] || '';
+      if (!rawUrl) { imageCache.push(null); continue; }
+
+      const dataUrl = await fetchImageAsBase64(rawUrl);
+      if (!dataUrl) { imageCache.push(null); continue; }
+
+      const { w: natW, h: natH } = await getImageDimensions(dataUrl);
+      const isLandscape = natW >= natH;
+
+      let imgW, imgH;
+      if (isLandscape) {
+        // Fit to cell width, maintain 3.5:2 aspect (or actual ratio)
+        imgW = IMG_W;
+        imgH = imgW * (natH / natW);
+        // Cap height: 2" = 50.8mm  (landscape target is ~22–25mm so this is plenty)
+        imgH = Math.min(imgH, 50.8);
+      } else {
+        // Portrait: fit to cell width, target 2:3.5 aspect
+        imgW = IMG_W;
+        imgH = imgW * (natH / natW);
+        // Cap at 3.5" = 88.9mm, but cap practically at 70mm
+        imgH = Math.min(imgH, 70);
+      }
+
+      const rowH = imgH + ROW_PAD * 2;
+      imageCache.push({ dataUrl, imgW, imgH, rowH, isLandscape });
+    }
+
+    // ─── Dismiss the fetching toast ───────────────────────────────────────
+    if (activeToast) dismissToast(activeToast);
+    showToast('Building PDF…', 'info', { persistent: true, spinner: true });
+
+    // ─── Header ──────────────────────────────────────────────────────────
+    const drawHeader = () => {
+      doc.setFillColor(211, 47, 47);
+      doc.rect(0, 0, pw, 40, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');   doc.setFontSize(17);
+      doc.text('HDJV Waste Management System', m, 15);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
+      doc.text(`${type === 'hazardous' ? 'Hazardous' : 'Solid'} Waste Report — Package ${selectedPackage.replace('P', '')}`, m, 24);
+      doc.setFontSize(8);
+      doc.text(`Generated: ${new Date().toLocaleString()}`, m, 32);
+    };
+    drawHeader();
+
+    // ─── Summary KPI box ─────────────────────────────────────────────────
+    let tv = 0; const wc = {};
+    dr.forEach(r => {
+      tv += type === 'hazardous' ? parseFloat(r[1]) || 0 : 1;
+      wc[r[2] || 'Unknown'] = (wc[r[2] || 'Unknown'] || 0) + 1;
     });
-    const total=doc.internal.getNumberOfPages();
-    for(let p=1;p<=total;p++){doc.setPage(p);doc.setFillColor(245,245,245);doc.rect(0,ph-11,pw,11,'F');doc.setTextColor(160,160,160);doc.setFontSize(7);doc.text('HDJV Environmental Management — Confidential',m,ph-4);doc.text(`Page ${p} of ${total}`,pw-m-18,ph-4);}
+    const tw = Object.entries(wc).sort((a, b) => b[1] - a[1])[0];
+
+    doc.setFillColor(249, 249, 249); doc.setDrawColor(230, 230, 230);
+    doc.roundedRect(m, 47, cw, 26, 3, 3, 'FD');
+    [
+      ['TOTAL ENTRIES', String(dr.length)],
+      [type === 'hazardous' ? 'VOLUME (kg)' : 'ENTRIES', type === 'hazardous' ? tv.toFixed(2) : String(dr.length)],
+      ['TOP WASTE', tw ? tw[0].slice(0, 20) : '—']
+    ].forEach(([lbl, val], i) => {
+      const x = m + i * (cw / 3) + 8;
+      doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.setTextColor(120, 120, 120); doc.text(lbl, x, 55);
+      doc.setFontSize(12); doc.setTextColor(211, 47, 47); doc.text(val, x, 65);
+    });
+
+    // ─── Table header row ─────────────────────────────────────────────────
+    const drawTableHeader = (yPos) => {
+      doc.setFillColor(211, 47, 47);
+      doc.rect(m, yPos, cw, 8, 'F');
+      doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+      let xp = m + 2;
+      hdrs.forEach((h, i) => { doc.text(h, xp, yPos + 5.5); xp += cols[i]; });
+    };
+
+    let y = 84;
+    drawTableHeader(y);
+    y += 8;
+
+    // ─── Data rows ────────────────────────────────────────────────────────
+    dr.forEach((r, idx) => {
+      const imgInfo = imageCache[idx];
+      const rowH    = imgInfo ? imgInfo.rowH : ROW_H_TEXT;
+
+      // Page break check
+      if (y + rowH > ph - 14) {
+        // Footer on current page first
+        drawPageFooter(doc, ph, m, pw);
+        doc.addPage();
+        drawHeader();
+        y = 47; // start table right after compact header on continuation pages
+        drawTableHeader(y);
+        y += 8;
+      }
+
+      // Row background
+      doc.setFillColor(
+        idx % 2 === 0 ? 255 : 248,
+        idx % 2 === 0 ? 255 : 248,
+        idx % 2 === 0 ? 255 : 250
+      );
+      doc.rect(m, y, cw, rowH, 'F');
+      doc.setDrawColor(235, 235, 235);
+      doc.line(m, y + rowH, m + cw, y + rowH);
+
+      // Text cells (cols 0–3)
+      doc.setTextColor(50, 50, 50); doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+      const textY = y + (rowH > ROW_H_TEXT ? ROW_PAD + 5 : 5.5); // align near top of tall rows
+      const cells = [
+        new Date(r[0]).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
+        String(r[1] || ''),
+        String(r[2] || ''),
+        String(r[4] || '')
+      ];
+      let xr = m + 2;
+      cells.forEach((c, i) => {
+        const maxChars = Math.floor(cols[i] / 2.2);
+        const txt = c.length > maxChars ? c.slice(0, maxChars - 1) + '…' : c;
+        doc.text(txt, xr, textY);
+        xr += cols[i];
+      });
+
+      // Photo cell
+      const photoX = m + cols[0] + cols[1] + cols[2] + cols[3]; // x start of photo column
+      if (imgInfo) {
+        // Center image horizontally in the photo column
+        const offsetX = photoX + (cols[4] - imgInfo.imgW) / 2;
+        const offsetY = y + ROW_PAD;
+        // Draw a subtle border around the photo
+        doc.setDrawColor(200, 200, 200);
+        doc.rect(offsetX - 0.5, offsetY - 0.5, imgInfo.imgW + 1, imgInfo.imgH + 1, 'S');
+        doc.addImage(imgInfo.dataUrl, 'JPEG', offsetX, offsetY, imgInfo.imgW, imgInfo.imgH);
+      } else {
+        // No image placeholder text
+        doc.setTextColor(180, 180, 180); doc.setFontSize(7);
+        doc.text('No image', photoX + 2, y + (rowH / 2) + 2);
+        doc.setTextColor(50, 50, 50); doc.setFontSize(8);
+      }
+
+      y += rowH;
+    });
+
+    // ─── Footer on last page ──────────────────────────────────────────────
+    const totalPages = doc.internal.getNumberOfPages();
+    for (let p = 1; p <= totalPages; p++) {
+      doc.setPage(p);
+      drawPageFooter(doc, ph, m, pw, p, totalPages);
+    }
+
     doc.save(`${type}_report_${selectedPackage}_${new Date().toISOString().split('T')[0]}.pdf`);
-    showToast('PDF generated!','success');
-  }catch(e){console.error(e);showToast('PDF failed','error');}
-  finally{if(btn){btn.disabled=false;btn.textContent='📄 PDF';}}
+    if (activeToast) dismissToast(activeToast);
+    showToast('PDF generated!', 'success');
+
+  } catch (e) {
+    console.error(e);
+    if (activeToast) dismissToast(activeToast);
+    showToast('PDF generation failed — see console', 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '📄 PDF'; }
+  }
+}
+
+function drawPageFooter(doc, ph, m, pw, page, total) {
+  doc.setFillColor(245, 245, 245);
+  doc.rect(0, ph - 11, pw, 11, 'F');
+  doc.setTextColor(160, 160, 160); doc.setFontSize(7); doc.setFont('helvetica', 'normal');
+  doc.text('HDJV Environmental Management — Confidential', m, ph - 4);
+  if (page && total) doc.text(`Page ${page} of ${total}`, pw - m - 20, ph - 4);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
