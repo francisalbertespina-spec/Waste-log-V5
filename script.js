@@ -115,11 +115,8 @@ if (token && !url.includes('token=')) {
 
 const DEV_MODE = false; // Set to false for production
 
-const scriptURL = "https://script.google.com/macros/s/AKfycbwJBzv06DEAM6QKLFplBU7aUOpMxEAwIE05pDyOVZfbfp9pOCzqrgcrZpg7Sx0-7teO/exec";
-// const scriptURL = "https://script.google.com/macros/s/AKfycbxS7wyAfqHKO73Om8h6VCR_M8Pr8FCx79uQP-uQ4PGbb80kyuoNpNjkarWS3UH3_iDy/exec";
-// const scriptURL = "https://script.google.com/macros/s/AKfycbyL27Vko3QfF9ENnRUxPAyN1y00Jv-W6VTuverYEVBleLm9pLCCn8V6r00MZK1wMUUe/exec";
-// const scriptURL = "https://script.google.com/macros/s/AKfycbwOzLtzZtvR2hrJuS6uVPe58GxATwtwwkSJ_yP073vST9B3283AYd7ADG8ApmPuDKJO/exec";
-// Stable V4 - const scriptURL = "https://script.google.com/macros/s/AKfycbxe2nDYZzBT8QCsp_XQa0RaV36c0MMUAYDdrwwGydSs0AbQ1H7RlbGHyE8YSmbhQxk-/exec";
+// const scriptURL = "https://script.google.com/macros/s/AKfycbwJBzv06DEAM6QKLFplBU7aUOpMxEAwIE05pDyOVZfbfp9pOCzqrgcrZpg7Sx0-7teO/exec";
+const scriptURL = "https://script.google.com/macros/s/AKfycbyMHs_Dtm0qejMBMkt0w6DFIYSGq-S07RMrVK4roCQ-V84W25V_cw5dgGd_pfGnm2Ay/exec";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SESSION MANAGEMENT
