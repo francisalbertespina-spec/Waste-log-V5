@@ -7,6 +7,7 @@
 ## Table of Contents
 
 - [Overview](#overview)
+- [Architecture](#architecture)
 - [Features](#features)
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
@@ -22,6 +23,14 @@
 ## Overview
 
 The HDJV WMS allows field workers to log waste disposal activities per construction package (P4, P5, P6) for two waste categories: **Hazardous** and **Solid**. Admins manage user access, view analytics, and export reports — all backed by Google Sheets as the data store and Google Apps Script as the serverless backend.
+
+---
+
+## Architecture
+
+![HDJV WMS Architecture](docs/architecture.svg)
+
+> Full interactive diagram: [Open in draw.io](https://viewer.diagrams.net/?url=https://raw.githubusercontent.com/francisalbertespina-spec/Waste-log-V5/main/docs/architecture.drawio)
 
 ---
 
