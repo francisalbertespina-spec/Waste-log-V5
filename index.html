@@ -298,8 +298,14 @@
       <div class="analytics-filters">
         <div class="filter-col"><label>Package</label><select id="analytics-package" class="analytics-select"><option value="P4">Package 4</option><option value="P5">Package 5</option><option value="P6">Package 6</option></select></div>
         <div class="filter-col"><label>Waste Type</label><select id="analytics-waste-type" class="analytics-select"><option value="hazardous">Hazardous</option><option value="solid">Solid</option></select></div>
-        <div class="filter-col"><label>Period</label><select id="analytics-period" class="analytics-select"><option value="7">7 days</option><option value="30" selected>30 days</option><option value="60">60 days</option><option value="90">90 days</option></select></div>
-        <button class="btn btn-primary" onclick="loadAnalytics()" style="height:42px;margin-top:20px;grid-column:1/-1;">Apply Filters</button>
+        <div class="filter-col"><label>Filter By</label><select id="analytics-filter-mode" class="analytics-select" onchange="toggleAnalyticsFilterMode()"><option value="period">Period</option><option value="range">Date Range</option></select></div>
+        <div class="filter-col" id="analytics-period-col"><label>Period</label><select id="analytics-period" class="analytics-select"><option value="7">Past 7 days</option><option value="30" selected>Past 30 days</option><option value="60">Past 60 days</option><option value="90">Past 90 days</option></select></div>
+        <div class="filter-col" id="analytics-range-col" style="display:none;"><label>From</label><input type="date" id="analytics-from" class="analytics-select"></div>
+        <div class="filter-col" id="analytics-range-col-to" style="display:none;"><label>To</label><input type="date" id="analytics-to" class="analytics-select"></div>
+        <div style="grid-column:1/-1;display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="loadAnalytics()" style="height:42px;flex:1;min-width:120px;">Apply Filters</button>
+          <button class="btn" id="analytics-pdf-btn" onclick="generateAnalyticsPDF()" style="height:42px;flex:1;min-width:120px;background:#fff;border:1.5px solid #d32f2f;color:#d32f2f;font-weight:600;" disabled>📄 Export PDF</button>
+        </div>
       </div>
 
       <div id="analytics-loading" style="display:none;flex-direction:column;align-items:center;padding:40px 0;">
