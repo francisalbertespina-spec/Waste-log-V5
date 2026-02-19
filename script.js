@@ -201,7 +201,7 @@ async function authenticatedFetch(url, options = {}) {
 }
 
 const DEV_MODE  = false;
-const scriptURL = "https://script.google.com/macros/s/AKfycbyMHs_Dtm0qejMBMkt0w6DFIYSGq-S07RMrVK4roCQ-V84W25V_cw5dgGd_pfGnm2Ay/exec";
+const scriptURL = "https://script.google.com/macros/s/AKfycbwJBzv06DEAM6QKLFplBU7aUOpMxEAwIE05pDyOVZfbfp9pOCzqrgcrZpg7Sx0-7teO/exec";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SESSION
@@ -496,47 +496,90 @@ async function loadRequests() {
 let chartInstances = {};
 function destroyChart(k) { if(chartInstances[k]){chartInstances[k].destroy();delete chartInstances[k];} }
 
-async function loadAnalytics() {
-  const pkg    = document.getElementById('analytics-package')?.value||'P4';
-  const wtype  = document.getElementById('analytics-waste-type')?.value||'hazardous';
-  const period = parseInt(document.getElementById('analytics-period')?.value||'30');
-  const today  = new Date(), from = new Date(today-period*86400000).toISOString().split('T')[0], to=today.toISOString().split('T')[0];
+// Track last loaded analytics data for PDF export
+window.lastAnalyticsData = null;
 
-  document.getElementById('analytics-loading').style.display='flex';
-  document.getElementById('analytics-content').style.display='none';
+function toggleAnalyticsFilterMode() {
+  const mode = document.getElementById('analytics-filter-mode')?.value;
+  const isPeriod = mode === 'period';
+  document.getElementById('analytics-period-col').style.display   = isPeriod ? '' : 'none';
+  document.getElementById('analytics-range-col').style.display    = isPeriod ? 'none' : '';
+  document.getElementById('analytics-range-col-to').style.display = isPeriod ? 'none' : '';
+}
+
+async function loadAnalytics() {
+  const pkg    = document.getElementById('analytics-package')?.value || 'P4';
+  const wtype  = document.getElementById('analytics-waste-type')?.value || 'hazardous';
+  const mode   = document.getElementById('analytics-filter-mode')?.value || 'period';
+  const today  = new Date();
+
+  let from, to, periodLabel;
+  if (mode === 'range') {
+    from = document.getElementById('analytics-from')?.value;
+    to   = document.getElementById('analytics-to')?.value;
+    if (!from || !to) { showToast('Please select both From and To dates', 'error'); return; }
+    if (from > to)    { showToast('From date must be before To date', 'error'); return; }
+    const ms = new Date(to) - new Date(from);
+    const days = Math.round(ms / 86400000) + 1;
+    periodLabel = from + ' to ' + to;
+    window._analyticsDays = days;
+  } else {
+    const period = parseInt(document.getElementById('analytics-period')?.value || '30');
+    from = new Date(today - period * 86400000).toISOString().split('T')[0];
+    to   = today.toISOString().split('T')[0];
+    periodLabel = 'Past ' + period + ' days';
+    window._analyticsDays = period;
+  }
+
+  const pdfBtn = document.getElementById('analytics-pdf-btn');
+  if (pdfBtn) pdfBtn.disabled = true;
+
+  document.getElementById('analytics-loading').style.display = 'flex';
+  document.getElementById('analytics-content').style.display = 'none';
 
   try {
-    const res  = await authenticatedFetch(`${scriptURL}?package=${pkg}&wasteType=${wtype}&from=${from}&to=${to}`);
+    const res  = await authenticatedFetch(scriptURL + '?package=' + pkg + '&wasteType=' + wtype + '&from=' + from + '&to=' + to);
     const rows = await res.json();
-    document.getElementById('analytics-loading').style.display='none';
-    document.getElementById('analytics-content').style.display='block';
+    document.getElementById('analytics-loading').style.display = 'none';
+    document.getElementById('analytics-content').style.display = 'block';
 
-    if (!rows||rows.error||rows.length<=1) {
-      document.getElementById('analytics-no-data').style.display='block';
-      document.getElementById('analytics-charts').style.display='none';
+    if (!rows || rows.error || rows.length <= 1) {
+      document.getElementById('analytics-no-data').style.display = 'block';
+      document.getElementById('analytics-charts').style.display  = 'none';
+      window.lastAnalyticsData = null;
       return;
     }
-    document.getElementById('analytics-no-data').style.display='none';
-    document.getElementById('analytics-charts').style.display='block';
+    document.getElementById('analytics-no-data').style.display = 'none';
+    document.getElementById('analytics-charts').style.display  = 'block';
 
-    const dr=[]; for(let i=1;i<rows.length;i++) dr.push(rows[i]);
-    let tv=0; const wc={},uc={},daily={};
-    dr.forEach(r=>{
-      const v=wtype==='hazardous'?parseFloat(r[1])||0:1; tv+=v;
-      wc[r[2]||'Unknown']=(wc[r[2]||'Unknown']||0)+1;
-      uc[r[4]||'Unknown']=(uc[r[4]||'Unknown']||0)+1;
-      const ds=new Date(r[0]).toLocaleDateString('en-US',{month:'short',day:'numeric'});
-      daily[ds]=(daily[ds]||0)+v;
+    const dr = rows.slice(1);
+    let tv = 0; const wc = {}, uc = {}, daily = {};
+    dr.forEach(r => {
+      const v = wtype === 'hazardous' ? parseFloat(r[1]) || 0 : 1; tv += v;
+      wc[r[2] || 'Unknown'] = (wc[r[2] || 'Unknown'] || 0) + 1;
+      uc[r[4] || 'Unknown'] = (uc[r[4] || 'Unknown'] || 0) + 1;
+      const ds = new Date(r[0]).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      daily[ds] = (daily[ds] || 0) + v;
     });
-    const tw=Object.entries(wc).sort((a,b)=>b[1]-a[1])[0];
-    document.getElementById('kpi-entries').textContent  = dr.length;
-    document.getElementById('kpi-volume').textContent   = wtype==='hazardous'?tv.toFixed(2)+' kg':dr.length;
-    document.getElementById('kpi-top-waste').textContent= tw?tw[0].split(' ').slice(0,3).join(' '):'—';
-    document.getElementById('kpi-avg-day').textContent  = (dr.length/period).toFixed(1);
-    renderTrendChart(daily,wtype);
+    const tw = Object.entries(wc).sort((a, b) => b[1] - a[1])[0];
+
+    document.getElementById('kpi-entries').textContent   = dr.length;
+    document.getElementById('kpi-volume').textContent    = wtype === 'hazardous' ? tv.toFixed(2) + ' kg' : dr.length;
+    document.getElementById('kpi-top-waste').textContent = tw ? tw[0].split(' ').slice(0, 3).join(' ') : '—';
+    document.getElementById('kpi-avg-day').textContent   = (dr.length / window._analyticsDays).toFixed(1);
+
+    renderTrendChart(daily, wtype);
     renderBreakdownChart(wc);
     renderContributors(uc);
-  } catch(err) { document.getElementById('analytics-loading').style.display='none'; showToast('Error loading analytics','error'); console.error(err); }
+
+    window.lastAnalyticsData = { dr, wc, uc, daily, tv, tw, wtype, pkg, periodLabel, from, to };
+    if (pdfBtn) pdfBtn.disabled = false;
+
+  } catch (err) {
+    document.getElementById('analytics-loading').style.display = 'none';
+    showToast('Error loading analytics', 'error');
+    console.error(err);
+  }
 }
 
 function mkGrad(ctx,c1,c2) { const g=ctx.createLinearGradient(0,0,0,240); g.addColorStop(0,c1); g.addColorStop(1,c2); return g; }
@@ -576,6 +619,150 @@ function renderContributors(uc) {
       </div>
       <div class="contributor-count">${count}</div>
     </div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ANALYTICS PDF EXPORT
+// ═══════════════════════════════════════════════════════════════════════════
+
+async function generateAnalyticsPDF() {
+  const data = window.lastAnalyticsData;
+  if (!data) { showToast('Load analytics first', 'error'); return; }
+
+  const btn = document.getElementById('analytics-pdf-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Generating…'; }
+
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pw = doc.internal.pageSize.getWidth();
+    const ph = doc.internal.pageSize.getHeight();
+    const m  = 15, cw = pw - m * 2;
+
+    const { dr, wc, uc, daily, tv, tw, wtype, pkg, periodLabel } = data;
+
+    // ── Header ────────────────────────────────────────────────────────────
+    doc.setFillColor(211, 47, 47);
+    doc.rect(0, 0, pw, 44, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');   doc.setFontSize(17);
+    doc.text('HDJV Waste Management System', m, 14);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
+    doc.text((wtype === 'hazardous' ? 'Hazardous' : 'Solid') + ' Waste Analytics — Package ' + pkg.replace('P', ''), m, 24);
+    doc.setFontSize(8);
+    doc.text('Period: ' + periodLabel, m, 32);
+    doc.text('Generated: ' + new Date().toLocaleString(), m, 39);
+
+    // ── KPI Summary ───────────────────────────────────────────────────────
+    const avgPerDay = (dr.length / (window._analyticsDays || 30)).toFixed(1);
+    doc.setFillColor(249, 249, 249); doc.setDrawColor(230, 230, 230);
+    doc.roundedRect(m, 50, cw, 28, 3, 3, 'FD');
+    [
+      ['TOTAL ENTRIES', String(dr.length)],
+      [wtype === 'hazardous' ? 'TOTAL VOLUME (kg)' : 'TOTAL ENTRIES', wtype === 'hazardous' ? tv.toFixed(2) : String(dr.length)],
+      ['TOP WASTE TYPE', tw ? tw[0].slice(0, 18) : '—'],
+      ['AVG / DAY', avgPerDay]
+    ].forEach(([lbl, val], i) => {
+      const x = m + i * (cw / 4) + 4;
+      doc.setFontSize(6.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(120, 120, 120);
+      doc.text(lbl, x, 59);
+      doc.setFontSize(11); doc.setTextColor(211, 47, 47);
+      doc.text(val, x, 69);
+    });
+
+    // ── Waste Breakdown Table ─────────────────────────────────────────────
+    let y = 87;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(40, 40, 40);
+    doc.text('Waste Type Breakdown', m, y); y += 7;
+
+    const sorted = Object.entries(wc).sort((a, b) => b[1] - a[1]);
+    const total  = sorted.reduce((s, [, v]) => s + v, 0);
+
+    // Table header
+    doc.setFillColor(211, 47, 47);
+    doc.rect(m, y, cw, 7, 'F');
+    doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+    doc.text('Waste Type', m + 3, y + 5);
+    doc.text('Count', m + cw - 44, y + 5);
+    doc.text('%', m + cw - 18, y + 5);
+    y += 7;
+
+    sorted.forEach(([name, count], idx) => {
+      if (y > ph - 20) {
+        drawAnalyticsFooter(doc, ph, m, pw);
+        doc.addPage(); y = 20;
+      }
+      doc.setFillColor(idx % 2 === 0 ? 255 : 248, idx % 2 === 0 ? 255 : 248, idx % 2 === 0 ? 255 : 250);
+      doc.rect(m, y, cw, 7, 'F');
+      doc.setDrawColor(235, 235, 235); doc.line(m, y + 7, m + cw, y + 7);
+      doc.setTextColor(50, 50, 50); doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+      // Bar indicator
+      const barW = Math.max(1, (count / sorted[0][1]) * 40);
+      doc.setFillColor(211, 47, 47, 0.15);
+      doc.setFillColor(255, 220, 220);
+      doc.rect(m + 3, y + 1.5, barW, 4, 'F');
+      doc.setTextColor(50, 50, 50);
+      doc.text(name.length > 38 ? name.slice(0, 37) + '…' : name, m + 3, y + 5.2);
+      doc.text(String(count), m + cw - 44, y + 5.2);
+      doc.text(((count / total) * 100).toFixed(1) + '%', m + cw - 18, y + 5.2);
+      y += 7;
+    });
+
+    y += 8;
+
+    // ── Top Contributors Table ────────────────────────────────────────────
+    if (y > ph - 60) { drawAnalyticsFooter(doc, ph, m, pw); doc.addPage(); y = 20; }
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(40, 40, 40);
+    doc.text('Top Contributors', m, y); y += 7;
+
+    const ucSorted = Object.entries(uc).sort((a, b) => b[1] - a[1]).slice(0, 10);
+    doc.setFillColor(211, 47, 47);
+    doc.rect(m, y, cw, 7, 'F');
+    doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+    doc.text('User', m + 3, y + 5);
+    doc.text('Entries', m + cw - 20, y + 5);
+    y += 7;
+
+    ucSorted.forEach(([email, count], idx) => {
+      if (y > ph - 20) { drawAnalyticsFooter(doc, ph, m, pw); doc.addPage(); y = 20; }
+      doc.setFillColor(idx % 2 === 0 ? 255 : 248, idx % 2 === 0 ? 255 : 248, idx % 2 === 0 ? 255 : 250);
+      doc.rect(m, y, cw, 7, 'F');
+      doc.setDrawColor(235, 235, 235); doc.line(m, y + 7, m + cw, y + 7);
+      doc.setTextColor(50, 50, 50); doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+      doc.text(email, m + 3, y + 5.2);
+      doc.text(String(count), m + cw - 20, y + 5.2);
+      y += 7;
+    });
+
+    // ── Footer on all pages ───────────────────────────────────────────────
+    const totalPages = doc.internal.getNumberOfPages();
+    for (let p = 1; p <= totalPages; p++) {
+      doc.setPage(p);
+      drawAnalyticsFooter(doc, ph, m, pw, p, totalPages);
+    }
+
+    const dateStr = new Date().toISOString().split('T')[0];
+    doc.save('analytics_' + pkg + '_' + wtype + '_' + dateStr + '.pdf');
+    document.querySelectorAll('.toast').forEach(t => t.remove());
+    activeToast = null;
+    showToast('Analytics PDF exported!', 'success');
+
+  } catch (err) {
+    console.error(err);
+    document.querySelectorAll('.toast').forEach(t => t.remove());
+    activeToast = null;
+    showToast('PDF export failed', 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '📄 Export PDF'; }
+  }
+}
+
+function drawAnalyticsFooter(doc, ph, m, pw, page, total) {
+  doc.setFillColor(245, 245, 245);
+  doc.rect(0, ph - 11, pw, 11, 'F');
+  doc.setTextColor(160, 160, 160); doc.setFontSize(7); doc.setFont('helvetica', 'normal');
+  doc.text('HDJV Environmental Management — Analytics Report — Confidential', m, ph - 4);
+  if (page && total) doc.text('Page ' + page + ' of ' + total, pw - m - 20, ph - 4);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -996,9 +1183,14 @@ async function generatePDFReport(type) {
       ];
       let xr = m + 2;
       cells.forEach((c, i) => {
-        const maxChars = Math.floor(cols[i] / 2.2);
-        const txt = c.length > maxChars ? c.slice(0, maxChars - 1) + '…' : c;
-        doc.text(txt, xr, textY);
+        // Use splitTextToSize for wrapping — shows full text without truncation
+        const maxW = cols[i] - 3; // leave 3mm padding
+        const lines = doc.splitTextToSize(String(c), maxW);
+        // For tall rows (with images), print up to 3 lines; for text rows up to 2
+        const maxLines = rowH > ROW_H_TEXT ? 3 : 2;
+        lines.slice(0, maxLines).forEach((ln, li) => {
+          doc.text(ln, xr, textY + li * 3.5);
+        });
         xr += cols[i];
       });
 
@@ -1030,12 +1222,15 @@ async function generatePDFReport(type) {
     }
 
     doc.save(`${type}_report_${selectedPackage}_${new Date().toISOString().split('T')[0]}.pdf`);
-    if (activeToast) dismissToast(activeToast);
+    // Dismiss any lingering toasts (Fetching... / Building PDF...)
+    document.querySelectorAll('.toast').forEach(t => t.remove());
+    activeToast = null;
     showToast('PDF generated!', 'success');
 
   } catch (e) {
     console.error(e);
-    if (activeToast) dismissToast(activeToast);
+    document.querySelectorAll('.toast').forEach(t => t.remove());
+    activeToast = null;
     showToast('PDF generation failed — see console', 'error');
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = '📄 PDF'; }
