@@ -201,7 +201,7 @@ async function authenticatedFetch(url, options = {}) {
 }
 
 const DEV_MODE  = false;
-const scriptURL = "https://script.google.com/macros/s/AKfycbwJBzv06DEAM6QKLFplBU7aUOpMxEAwIE05pDyOVZfbfp9pOCzqrgcrZpg7Sx0-7teO/exec";
+const scriptURL = "https://script.google.com/macros/s/AKfycbyMHs_Dtm0qejMBMkt0w6DFIYSGq-S07RMrVK4roCQ-V84W25V_cw5dgGd_pfGnm2Ay/exec";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SESSION
@@ -564,7 +564,7 @@ async function loadAnalytics() {
     const tw = Object.entries(wc).sort((a, b) => b[1] - a[1])[0];
 
     document.getElementById('kpi-entries').textContent   = dr.length;
-    document.getElementById('kpi-volume').textContent    = wtype === 'hazardous' ? tv.toFixed(2) + ' kg' : dr.length;
+    document.getElementById('kpi-volume').textContent    = dr.length;
     document.getElementById('kpi-top-waste').textContent = tw ? tw[0].split(' ').slice(0, 3).join(' ') : '—';
     document.getElementById('kpi-avg-day').textContent   = (dr.length / window._analyticsDays).toFixed(1);
 
@@ -641,12 +641,20 @@ async function generateAnalyticsPDF() {
 
     const { dr, wc, uc, daily, tv, tw, wtype, pkg, periodLabel } = data;
 
-    // ── Helper: capture a chart canvas as image ───────────────────────────
+    // ── Helper: capture a chart canvas at 2x resolution for crisp PDF output ──
     const captureChart = (canvasId) => {
       try {
-        const canvas = document.getElementById(canvasId);
-        if (!canvas) return null;
-        return canvas.toDataURL('image/png', 1.0);
+        const srcCanvas = document.getElementById(canvasId);
+        if (!srcCanvas) return null;
+        // Draw source canvas onto a 2x-scaled offscreen canvas for higher DPI
+        const scale = 2;
+        const offscreen = document.createElement('canvas');
+        offscreen.width  = srcCanvas.width  * scale;
+        offscreen.height = srcCanvas.height * scale;
+        const ctx = offscreen.getContext('2d');
+        ctx.scale(scale, scale);
+        ctx.drawImage(srcCanvas, 0, 0);
+        return offscreen.toDataURL('image/png', 1.0);
       } catch { return null; }
     };
 
@@ -668,11 +676,10 @@ async function generateAnalyticsPDF() {
     doc.roundedRect(m, 50, cw, 28, 3, 3, 'FD');
     [
       ['TOTAL ENTRIES', String(dr.length)],
-      [wtype === 'hazardous' ? 'TOTAL VOLUME (kg)' : 'TOTAL ENTRIES', wtype === 'hazardous' ? tv.toFixed(2) : String(dr.length)],
       ['TOP WASTE TYPE', tw ? tw[0].slice(0, 18) : '—'],
       ['AVG / DAY', avgPerDay]
     ].forEach(([lbl, val], i) => {
-      const x = m + i * (cw / 4) + 4;
+      const x = m + i * (cw / 3) + 4;
       doc.setFontSize(6.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(120, 120, 120);
       doc.text(lbl, x, 59);
       doc.setFontSize(11); doc.setTextColor(211, 47, 47);
@@ -682,7 +689,7 @@ async function generateAnalyticsPDF() {
     // ── Daily Trend Chart ─────────────────────────────────────────────────
     let y = 87;
     doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(40, 40, 40);
-    doc.text('📈 Daily Trend', m, y); y += 5;
+    doc.text('Daily Trend', m, y); y += 5;
 
     const trendImg = captureChart('analytics-trend-chart');
     if (trendImg) {
@@ -700,7 +707,7 @@ async function generateAnalyticsPDF() {
 
     // ── Waste Breakdown Chart ─────────────────────────────────────────────
     doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(40, 40, 40);
-    doc.text('📊 Waste Type Breakdown', m, y); y += 5;
+    doc.text('Waste Type Breakdown', m, y); y += 5;
 
     const breakdownImg = captureChart('analytics-breakdown-chart');
     if (breakdownImg) {
@@ -724,27 +731,15 @@ async function generateAnalyticsPDF() {
     const sorted = Object.entries(wc).sort((a, b) => b[1] - a[1]);
     const totalCount = sorted.reduce((s, [, v]) => s + v, 0);
 
-    // Build per-waste-type volume map (for hazardous only; solid uses count)
-    const wasteVolMap = {};
-    if (wtype === 'hazardous') {
-      dr.forEach(r => {
-        const k = r[2] || 'Unknown';
-        wasteVolMap[k] = (wasteVolMap[k] || 0) + (parseFloat(r[1]) || 0);
-      });
-    }
-
-    // Column positions: Waste Type | Count | Total Vol (if hazardous) | %
-    const hasVol = wtype === 'hazardous';
-    // col widths: name=90, count=25, vol=35(if hazardous), pct=20 → pad rest
-    const nameW = hasVol ? 86 : 118, countW = 24, volW = 34, pctW = 22;
+    // Column positions: Waste Type | Count | %
+    const nameW = 130, countW = 26, pctW = 24;
 
     doc.setFillColor(211, 47, 47);
     doc.rect(m, y, cw, 7, 'F');
     doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
-    doc.text('Waste Type',       m + 3,                         y + 5);
-    doc.text('Count',            m + nameW + 3,                 y + 5);
-    if (hasVol) doc.text('Vol (kg)', m + nameW + countW + 3,   y + 5);
-    doc.text('%',                m + cw - pctW + 3,             y + 5);
+    doc.text('Waste Type', m + 3,            y + 5);
+    doc.text('Count',      m + nameW + 3,    y + 5);
+    doc.text('%',          m + cw - pctW + 3, y + 5);
     y += 7;
 
     sorted.forEach(([name, count], idx) => {
@@ -755,10 +750,9 @@ async function generateAnalyticsPDF() {
         doc.setFillColor(211, 47, 47);
         doc.rect(m, y, cw, 7, 'F');
         doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
-        doc.text('Waste Type',       m + 3,                         y + 5);
-        doc.text('Count',            m + nameW + 3,                 y + 5);
-        if (hasVol) doc.text('Vol (kg)', m + nameW + countW + 3,   y + 5);
-        doc.text('%',                m + cw - pctW + 3,             y + 5);
+        doc.text('Waste Type', m + 3,             y + 5);
+        doc.text('Count',      m + nameW + 3,     y + 5);
+        doc.text('%',          m + cw - pctW + 3, y + 5);
         y += 7;
       }
       doc.setFillColor(idx % 2 === 0 ? 255 : 248, idx % 2 === 0 ? 255 : 248, idx % 2 === 0 ? 255 : 250);
@@ -770,11 +764,10 @@ async function generateAnalyticsPDF() {
       doc.setFillColor(255, 220, 220);
       doc.rect(m + 2, y + 1.5, barW, 4, 'F');
       doc.setTextColor(50, 50, 50);
-      const displayName = name.length > 34 ? name.slice(0, 33) + '…' : name;
-      doc.text(displayName,                                      m + 3,                       y + 5.2);
-      doc.text(String(count),                                    m + nameW + 3,               y + 5.2);
-      if (hasVol) doc.text((wasteVolMap[name] || 0).toFixed(2), m + nameW + countW + 3,      y + 5.2);
-      doc.text(((count / totalCount) * 100).toFixed(1) + '%',   m + cw - pctW + 3,           y + 5.2);
+      const displayName = name.length > 46 ? name.slice(0, 45) + '…' : name;
+      doc.text(displayName,                                    m + 3,             y + 5.2);
+      doc.text(String(count),                                  m + nameW + 3,     y + 5.2);
+      doc.text(((count / totalCount) * 100).toFixed(1) + '%', m + cw - pctW + 3, y + 5.2);
       y += 7;
     });
 
@@ -784,7 +777,6 @@ async function generateAnalyticsPDF() {
     doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(40, 40, 40);
     doc.text('TOTAL', m + 3, y + 5.2);
     doc.text(String(totalCount), m + nameW + 3, y + 5.2);
-    if (hasVol) doc.text(tv.toFixed(2), m + nameW + countW + 3, y + 5.2);
     doc.text('100%', m + cw - pctW + 3, y + 5.2);
     y += 10;
 
@@ -1058,9 +1050,18 @@ async function fetchImageViaProxy(fileId) {
   try {
     const token = localStorage.getItem('userToken');
     const url   = `${scriptURL}?action=getImageBase64&id=${fileId}&token=${token}`;
-    const res   = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    // Use manual timeout instead of AbortSignal.timeout() for browser compatibility
+    const controller = new AbortController();
+    const timeoutId  = setTimeout(() => controller.abort(), 15000);
+    let res;
+    try {
+      res = await fetch(url, { signal: controller.signal });
+    } finally {
+      clearTimeout(timeoutId);
+    }
     if (!res.ok) return null;
-    const data  = await res.json();
+    const data = await res.json();
+    if (data.error) { console.warn('[PDF] Proxy error:', data.error); return null; }
     if (data.base64 && data.mimeType) {
       return {
         dataUrl: `data:${data.mimeType};base64,${data.base64}`,
@@ -1069,7 +1070,10 @@ async function fetchImageViaProxy(fileId) {
       };
     }
     return null;
-  } catch { return null; }
+  } catch (err) {
+    console.warn('[PDF] fetchImageViaProxy failed:', err.message);
+    return null;
+  }
 }
 
 // ── Master image resolver — tries multiple strategies ─────────────────────
