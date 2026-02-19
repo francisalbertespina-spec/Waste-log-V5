@@ -300,8 +300,11 @@
         <div class="filter-col"><label>Waste Type</label><select id="analytics-waste-type" class="analytics-select"><option value="hazardous">Hazardous</option><option value="solid">Solid</option></select></div>
         <div class="filter-col"><label>Filter By</label><select id="analytics-filter-mode" class="analytics-select" onchange="toggleAnalyticsFilterMode()"><option value="period">Period</option><option value="range">Date Range</option></select></div>
         <div class="filter-col" id="analytics-period-col"><label>Period</label><select id="analytics-period" class="analytics-select"><option value="7">Past 7 days</option><option value="30" selected>Past 30 days</option><option value="60">Past 60 days</option><option value="90">Past 90 days</option></select></div>
-        <div class="filter-col" id="analytics-range-col" style="display:none;"><label>From</label><input type="date" id="analytics-from" class="analytics-select"></div>
-        <div class="filter-col" id="analytics-range-col-to" style="display:none;"><label>To</label><input type="date" id="analytics-to" class="analytics-select"></div>
+        <!-- Date range row — hidden until mode=range -->
+        <div id="analytics-range-row" style="display:none;grid-column:1/-1;display:none;gap:12px;grid-template-columns:1fr 1fr;">
+          <div class="filter-col" style="margin:0;"><label>From</label><input type="date" id="analytics-from" class="analytics-select" style="width:100%;"></div>
+          <div class="filter-col" style="margin:0;"><label>To</label><input type="date" id="analytics-to" class="analytics-select" style="width:100%;"></div>
+        </div>
         <div style="grid-column:1/-1;display:flex;gap:10px;flex-wrap:wrap;">
           <button class="btn btn-primary" onclick="loadAnalytics()" style="height:42px;flex:1;min-width:120px;">Apply Filters</button>
           <button class="btn" id="analytics-pdf-btn" onclick="generateAnalyticsPDF()" style="height:42px;flex:1;min-width:120px;background:#fff;border:1.5px solid #d32f2f;color:#d32f2f;font-weight:600;" disabled>📄 Export PDF</button>
