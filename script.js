@@ -201,7 +201,7 @@ async function authenticatedFetch(url, options = {}) {
 }
 
 const DEV_MODE  = false;
-const scriptURL = "https://script.google.com/macros/s/AKfycbzkQRbFtAcYUE_2vdZe4o2CScqMilkjZfnMoaicjs0ANYGX4gl-LZzE1p7m98-IP8kqlA/exec";
+const scriptURL = "https://script.google.com/macros/s/AKfycbwqBjfmHWzv9XjNMsPrd7ZG78RZjekZpMhJl9EsjJ9_i2CT8xK4CZT-FkfZbXiSCwoI9g/exec";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SESSION
