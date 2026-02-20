@@ -426,7 +426,7 @@ body.theme-dark .settings-card-danger { background:#281810; border-color:#5a2a14
 .role-select[value="admin"]       { color:var(--primary); border-color:var(--primary); background-color:#fffbf0; }
 .role-select[value="super_admin"] { color:#c62828; border-color:#c62828; background-color:#fff5f5; }
 .role-select[value="user"]        { color:#1976d2; border-color:#1976d2; background-color:#f0f7ff; }
-.action-cell { display:flex; gap:5px; justify-content:center; align-items:center; flex-wrap:wrap; }
+.action-cell { display:flex; gap:5px; justify-content:center; align-items:center; flex-wrap:wrap; width:100%; }
 .btn-action { padding:7px 11px; border:none; border-radius:7px; font-size:0.8rem; font-weight:700; cursor:pointer; transition:all 0.2s; display:inline-flex; align-items:center; gap:4px; white-space:nowrap; box-shadow:0 1px 3px rgba(0,0,0,0.1); }
 .btn-action:hover { transform:translateY(-1px); box-shadow:0 3px 10px rgba(0,0,0,0.18); }
 .btn-approve { background:linear-gradient(135deg,#4caf50,#43a047); color:white; }
