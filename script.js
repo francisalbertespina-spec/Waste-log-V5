@@ -493,7 +493,7 @@ function renderUsers(users) {
       : u.status==='Pending'
       ? `<span class="status-badge status-pending">${u.status}</span>`
       : `<span class="status-badge status-rejected">${u.status}</span>`;
-    tr.innerHTML=`<td style="text-align:left;">${u.email}</td><td>${statSel}</td><td>${roleSel}</td><td class="action-cell">${actions}</td>`;
+    tr.innerHTML=`<td style="text-align:left;">${u.email}</td><td>${statSel}</td><td>${roleSel}</td><td><div class="action-cell">${actions}</div></td>`;
     tbody.appendChild(tr);
   });
   applyDropdownStyling();
