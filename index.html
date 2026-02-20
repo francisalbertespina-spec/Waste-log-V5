@@ -349,9 +349,31 @@
       <button class="back-btn" onclick="backToAdminDashboard()">← Admin Dashboard</button>
       <div class="breadcrumb"><span class="breadcrumb-item" onclick="backToAdminDashboard()">Admin</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item active">Users</span></div>
       <div class="admin-card">
-        <div class="admin-header"><h2>👥 User Management</h2><p>Approve or reject access requests</p></div>
+        <div class="admin-header"><h2>👥 User Management</h2><p>Manage user access and roles</p></div>
         <div class="admin-block">
-          <div class="admin-block-header"><h3>All Users</h3><button class="btn btn-sm" onclick="loadUsers()">Refresh</button></div>
+          <div class="admin-block-header"><h3>All Users</h3><button class="btn btn-sm" onclick="loadUsers()">↻ Refresh</button></div>
+
+          <!-- Filter Bar -->
+          <div class="user-filter-bar">
+            <div class="user-filter-search">
+              <span class="filter-icon">🔍</span>
+              <input type="text" id="uf-search" placeholder="Search by email…" oninput="applyUserFilters()" autocomplete="off">
+            </div>
+            <select id="uf-status" onchange="applyUserFilters()" class="filter-select">
+              <option value="all">All Statuses</option>
+              <option value="Pending">Pending</option>
+              <option value="Approved">Approved</option>
+              <option value="Rejected">Rejected</option>
+            </select>
+            <select id="uf-role" onchange="applyUserFilters()" class="filter-select">
+              <option value="all">All Roles</option>
+              <option value="user">User</option>
+              <option value="admin">Admin</option>
+              <option value="super_admin">Super Admin</option>
+            </select>
+            <span id="uf-count" class="filter-count"></span>
+          </div>
+
           <div class="admin-table-wrap">
             <table class="admin-table">
               <thead><tr><th>Email</th><th>Status</th><th>Role</th><th>Action</th></tr></thead>

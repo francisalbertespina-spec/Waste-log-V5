@@ -201,7 +201,7 @@ async function authenticatedFetch(url, options = {}) {
 }
 
 const DEV_MODE  = false;
-const scriptURL = "https://script.google.com/macros/s/AKfycbwUq4-BYp1tUL5UcjvZIOlpkX18iKwY445SlyrUWMwMTUgFTNM19XWvjkhdjCkb49y21A/exec";
+const scriptURL = "https://script.google.com/macros/s/AKfycby4e9PUOmJzsaOaK7q1TEadzPNQAr-NGEkr59ms7O2pC3bwqAVo7PS42G8wJhbobiKSyw/exec";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SESSION
@@ -436,20 +436,48 @@ async function loadUsers() {
   try {
     const res   = await authenticatedFetch(`${scriptURL}?action=getUsers`);
     const users = await res.json();
-    renderUsers(users);
-    if (Array.isArray(users)) { const p=users.filter(u=>u.status==='Pending').length; updatePendingBadge(p); lastKnownPendingCount=p; }
+    if (!Array.isArray(users)) { showToast("Failed to load users","error"); return; }
+    // Store full list globally so filters can re-render without re-fetching
+    window._allUsers = users;
+    const p = users.filter(u=>u.status==='Pending').length;
+    updatePendingBadge(p);
+    lastKnownPendingCount = p;
+    applyUserFilters();
   } catch { showToast("Failed to load users","error"); }
+}
+
+// Called by filter controls and loadUsers — applies current filter state to window._allUsers
+function applyUserFilters() {
+  const users = window._allUsers || [];
+  const searchVal  = (document.getElementById('uf-search')?.value  || '').toLowerCase().trim();
+  const statusVal  =  document.getElementById('uf-status')?.value  || 'all';
+  const roleVal    =  document.getElementById('uf-role')?.value    || 'all';
+
+  const filtered = users.filter(u => {
+    const matchSearch = !searchVal || u.email.toLowerCase().includes(searchVal);
+    const matchStatus = statusVal === 'all' || u.status === statusVal;
+    const matchRole   = roleVal   === 'all' || (u.role || 'user') === roleVal;
+    return matchSearch && matchStatus && matchRole;
+  });
+
+  // Update count badge
+  const countEl = document.getElementById('uf-count');
+  if (countEl) countEl.textContent = `${filtered.length} of ${users.length} user${users.length !== 1 ? 's' : ''}`;
+
+  renderUsers(filtered);
 }
 
 function renderUsers(users) {
   const tbody = document.getElementById("usersTableBody");
   tbody.innerHTML = "";
-  if (!users || !users.length) { tbody.innerHTML=`<tr><td colspan="4" style="text-align:center;padding:20px;color:#999;">No users found</td></tr>`; return; }
+  if (!users || !users.length) {
+    tbody.innerHTML=`<tr><td colspan="4" style="text-align:center;padding:30px;color:#999;">No users match the current filters</td></tr>`;
+    return;
+  }
   const me=localStorage.getItem("userEmail"), myRole=localStorage.getItem("userRole");
   const isSA=myRole==="super_admin", isA=myRole==="admin";
-  const list = isSA ? users : users.filter(u=>u.status==='Pending'||['admin','super_admin'].includes(u.role));
 
-  list.forEach(u => {
+  users.forEach(u => {
     const tr=document.createElement("tr"), isMe=u.email.toLowerCase()===me?.toLowerCase();
     const canS=isSA||(isA&&u.status==='Pending'), canR=isSA&&!isMe;
     const statSel=`<select class="admin-select status-select" value="${u.status}" ${canS?'':'disabled'} onchange="updateUserStatus('${u.email}',this.value)">${['Pending','Approved','Rejected'].map(o=>`<option value="${o}" ${u.status===o?'selected':''}>${o}</option>`).join('')}</select>`;
@@ -459,12 +487,17 @@ function renderUsers(users) {
       ? `<button class="btn-action btn-approve" onclick="quickApprove('${u.email}')">✓</button><button class="btn-action btn-reject" onclick="quickReject('${u.email}')">✗</button>`
       : isSA&&!isMe ? `<button class="btn-action btn-delete" onclick="deleteUser('${u.email}')">🗑️</button>`
       : `<span style="color:#999;font-size:0.85rem;">—</span>`;
-    tr.innerHTML=`<td style="text-align:left;">${u.email}${isMe?' <span style="color:#999;font-size:0.72rem;">(You)</span>':''}</td><td>${statSel}</td><td>${roleSel}</td><td class="action-cell">${actions}</td>`;
+    // Status badge for visual clarity
+    const statusBadge = u.status==='Approved'
+      ? `<span class="status-badge status-approved">${u.status}</span>`
+      : u.status==='Pending'
+      ? `<span class="status-badge status-pending">${u.status}</span>`
+      : `<span class="status-badge status-rejected">${u.status}</span>`;
+    tr.innerHTML=`<td style="text-align:left;">${u.email}</td><td>${statSel}</td><td>${roleSel}</td><td class="action-cell">${actions}</td>`;
     tbody.appendChild(tr);
   });
   applyDropdownStyling();
 }
-
 function applyDropdownStyling() {
   document.querySelectorAll('.status-select,.role-select').forEach(s=>s.setAttribute('value',s.value));
 }
