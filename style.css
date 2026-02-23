@@ -504,7 +504,15 @@ th,td { padding:7px 6px; border-bottom:1px solid var(--border-lt); word-wrap:bre
 th { background:var(--bg2); font-weight:700; color:var(--text2); border-bottom:2px solid var(--border); }
 tr:hover { background:var(--bg2); }
 th:nth-child(5),td:nth-child(5) { width:65px; }
+th:nth-child(6),td:nth-child(6) { width:80px; }
 td a.photo-link { color:#2563eb; cursor:pointer; text-decoration:underline; }
+
+/* ── Entry edit/delete buttons ── */
+.entry-action-cell  { display:flex; gap:4px; justify-content:center; align-items:center; }
+.btn-entry-action   { padding:5px 8px; border:none; border-radius:6px; font-size:0.78rem; cursor:pointer; transition:all 0.2s; box-shadow:0 1px 3px rgba(0,0,0,0.1); line-height:1; }
+.btn-entry-action:hover { transform:translateY(-1px); box-shadow:0 3px 8px rgba(0,0,0,0.18); }
+.btn-entry-edit     { background:linear-gradient(135deg,#1976d2,#1565c0); color:white; }
+.btn-entry-delete   { background:linear-gradient(135deg,#f44336,#e53935); color:white; }
 
 /* ═══════════════════════════════════════════════════════
    SPINNER / EMPTY
