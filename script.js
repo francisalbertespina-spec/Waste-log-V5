@@ -478,7 +478,7 @@ function renderUsers(users) {
       ? `<button class="btn-action btn-approve" onclick="quickApprove('${u.email}')">✓</button><button class="btn-action btn-reject" onclick="quickReject('${u.email}')">✗</button>`
       : isSA&&!isMe ? `<button class="btn-action btn-delete" onclick="deleteUser('${u.email}')">🗑️</button>`
       : `<span style="color:#999;font-size:0.85rem;">—</span>`;
-    tr.innerHTML=`<td style="text-align:left;">${u.email}${isMe?' <span style="color:#999;font-size:0.72rem;">(You)</span>':''}</td><td>${statSel}</td><td>${roleSel}</td><td class="action-cell">${actions}</td>`;
+    tr.innerHTML=`<td style="text-align:left;">${u.email}${isMe?' <span style="color:#999;font-size:0.72rem;">(You)</span>':''}</td><td>${statSel}</td><td>${roleSel}</td><td><div class="action-cell">${actions}</div></td>`;
     tbody.appendChild(tr);
   });
   applyDropdownStyling();
