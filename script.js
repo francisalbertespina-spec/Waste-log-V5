@@ -201,7 +201,7 @@ async function authenticatedFetch(url, options = {}) {
 }
 
 const DEV_MODE  = false;
-const scriptURL = "https://script.google.com/macros/s/AKfycbxmbnrMEMEq9qNV4EpUBI_wEDMJUXf1cQ_gGZTJfVYjeXZh54svXErS4n2KZXRNmi8OZw/exec";
+const scriptURL = "https://script.google.com/macros/s/AKfycby4e9PUOmJzsaOaK7q1TEadzPNQAr-NGEkr59ms7O2pC3bwqAVo7PS42G8wJhbobiKSyw/exec";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SESSION
@@ -993,20 +993,34 @@ async function loadHistory(type) {
     document.getElementById(`${type}-table-container`).style.display='block';
     document.getElementById(`${type}-exportBtn`).disabled=false;
     document.getElementById(`${type}-pdfBtn`).disabled=false;
+    // Store row data by rowIndex so onclick never needs to pass raw strings
+    window._entryRowCache = {};
     const tb=document.getElementById(`${type}-table-body`); tb.innerHTML='';
     dr.forEach(r=>{
       const rowIndex=r[6]; // sheet row index appended by backend
+      window._entryRowCache[rowIndex] = { type, date: r[0], valueField: r[1], waste: r[2] };
       const date=new Date(r[0]).toLocaleDateString("en-US",{year:"numeric",month:"short",day:"numeric"});
       let img=''; if(r[5]){const m=r[5].match(/\/d\/([^/]+)/);img=m?`https://drive.google.com/uc?export=view&id=${m[1]}`:r[5];}
       const link=img?`<a class="photo-link" onclick="openImageModal('${img}')">View</a>`:'—';
       const ownerEmail=(r[4]||'').toLowerCase();
       const canEdit=isAdmin||(ownerEmail===myEmail);
-      const actions=canEdit
-        ? `<button class="btn-entry-action btn-entry-edit" onclick="openEditModal('${type}',${rowIndex},'${r[0]}','${(r[1]||'').replace(/'/g,"\'")}','${(r[2]||'').replace(/'/g,"\'")}')">✏️</button>`
-          +`<button class="btn-entry-action btn-entry-delete" onclick="deleteEntry('${type}',${rowIndex})">🗑️</button>`
-        : '—';
       const tr=document.createElement("tr");
-      tr.innerHTML=`<td>${date}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[4]}</td><td>${link}</td><td><div class="entry-action-cell">${actions}</div></td>`;
+      tr.innerHTML=`<td>${date}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[4]}</td><td>${link}</td><td><div class="entry-action-cell"></div></td>`;
+      if(canEdit){
+        const editBtn=document.createElement('button');
+        editBtn.className='btn-entry-action btn-entry-edit';
+        editBtn.textContent='✏️';
+        editBtn.onclick=()=>openEditModal(type, rowIndex);
+        const delBtn=document.createElement('button');
+        delBtn.className='btn-entry-action btn-entry-delete';
+        delBtn.textContent='🗑️';
+        delBtn.onclick=()=>deleteEntry(type, rowIndex);
+        const cell=tr.querySelector('.entry-action-cell');
+        cell.appendChild(editBtn);
+        cell.appendChild(delBtn);
+      } else {
+        tr.querySelector('.entry-action-cell').textContent='—';
+      }
       tb.appendChild(tr);
     });
   } catch(err){document.getElementById(`${type}-loading`).style.display='none';showToast('Error loading data','error');console.error(err);}
@@ -1015,17 +1029,19 @@ async function loadHistory(type) {
 // ── Entry edit modal ─────────────────────────────────────────────────────────
 let _editCtx = {};
 
-function openEditModal(type, rowIndex, date, valueField, waste) {
+function openEditModal(type, rowIndex) {
+  const row = (window._entryRowCache||{})[rowIndex];
+  if(!row){ showToast('Entry data not found','error'); return; }
   _editCtx = { type, rowIndex };
   const isHaz = type==='hazardous';
   document.getElementById('edit-modal-title').textContent = isHaz ? 'Edit Hazardous Entry' : 'Edit Solid Entry';
-  document.getElementById('edit-label-value').textContent = isHaz ? 'Volume (kg)' : 'Location';
+  document.getElementById('edit-label-value').textContent = isHaz ? 'Volume (kg)' : 'Location (Pier No.)';
   // Format date for input[type=date] (YYYY-MM-DD)
-  const d = new Date(date);
+  const d = new Date(row.date);
   const yyyy=d.getFullYear(), mm=String(d.getMonth()+1).padStart(2,'0'), dd=String(d.getDate()).padStart(2,'0');
   document.getElementById('edit-date').value = `${yyyy}-${mm}-${dd}`;
-  document.getElementById('edit-value').value = valueField;
-  document.getElementById('edit-waste').value = waste;
+  document.getElementById('edit-value').value = row.valueField || '';
+  document.getElementById('edit-waste').value = row.waste || '';
   document.getElementById('entry-edit-modal').style.display='flex';
 }
 
