@@ -972,6 +972,10 @@ async function loadHistory(type) {
   document.getElementById(`${type}-table-container`).style.display='none';
   document.getElementById(`${type}-empty-state`).style.display='none';
 
+  const myEmail = (localStorage.getItem('userEmail')||'').toLowerCase();
+  const myRole  = localStorage.getItem('userRole')||'user';
+  const isAdmin = myRole==='admin'||myRole==='super_admin';
+
   try {
     const res=await authenticatedFetch(`${scriptURL}?package=${selectedPackage}&wasteType=${type}&from=${from}&to=${to}`);
     const rows=await res.json();
@@ -980,6 +984,10 @@ async function loadHistory(type) {
     if(rows.error){showToast(rows.error,'error');document.getElementById(`${type}-empty-state`).style.display='block';return;}
     if(rows.length<=1){document.getElementById(`${type}-empty-state`).style.display='block';return;}
     let dr=rows.slice(1);
+
+    // Regular users see only their own entries
+    if(!isAdmin) dr=dr.filter(r=>(r[4]||'').toLowerCase()===myEmail);
+
     if(wf) dr=dr.filter(r=>(r[2]||'').toLowerCase().includes(wf.toLowerCase()));
     if(!dr.length){document.getElementById(`${type}-empty-state`).style.display='block';return;}
     document.getElementById(`${type}-table-container`).style.display='block';
@@ -987,12 +995,74 @@ async function loadHistory(type) {
     document.getElementById(`${type}-pdfBtn`).disabled=false;
     const tb=document.getElementById(`${type}-table-body`); tb.innerHTML='';
     dr.forEach(r=>{
+      const rowIndex=r[6]; // sheet row index appended by backend
       const date=new Date(r[0]).toLocaleDateString("en-US",{year:"numeric",month:"short",day:"numeric"});
       let img=''; if(r[5]){const m=r[5].match(/\/d\/([^/]+)/);img=m?`https://drive.google.com/uc?export=view&id=${m[1]}`:r[5];}
       const link=img?`<a class="photo-link" onclick="openImageModal('${img}')">View</a>`:'—';
-      const tr=document.createElement("tr"); tr.innerHTML=`<td>${date}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[4]}</td><td>${link}</td>`; tb.appendChild(tr);
+      const ownerEmail=(r[4]||'').toLowerCase();
+      const canEdit=isAdmin||(ownerEmail===myEmail);
+      const actions=canEdit
+        ? `<button class="btn-entry-action btn-entry-edit" onclick="openEditModal('${type}',${rowIndex},'${r[0]}','${(r[1]||'').replace(/'/g,"\'")}','${(r[2]||'').replace(/'/g,"\'")}')">✏️</button>`
+          +`<button class="btn-entry-action btn-entry-delete" onclick="deleteEntry('${type}',${rowIndex})">🗑️</button>`
+        : '—';
+      const tr=document.createElement("tr");
+      tr.innerHTML=`<td>${date}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[4]}</td><td>${link}</td><td><div class="entry-action-cell">${actions}</div></td>`;
+      tb.appendChild(tr);
     });
   } catch(err){document.getElementById(`${type}-loading`).style.display='none';showToast('Error loading data','error');console.error(err);}
+}
+
+// ── Entry edit modal ─────────────────────────────────────────────────────────
+let _editCtx = {};
+
+function openEditModal(type, rowIndex, date, valueField, waste) {
+  _editCtx = { type, rowIndex };
+  const isHaz = type==='hazardous';
+  document.getElementById('edit-modal-title').textContent = isHaz ? 'Edit Hazardous Entry' : 'Edit Solid Entry';
+  document.getElementById('edit-label-value').textContent = isHaz ? 'Volume (kg)' : 'Location';
+  // Format date for input[type=date] (YYYY-MM-DD)
+  const d = new Date(date);
+  const yyyy=d.getFullYear(), mm=String(d.getMonth()+1).padStart(2,'0'), dd=String(d.getDate()).padStart(2,'0');
+  document.getElementById('edit-date').value = `${yyyy}-${mm}-${dd}`;
+  document.getElementById('edit-value').value = valueField;
+  document.getElementById('edit-waste').value = waste;
+  document.getElementById('entry-edit-modal').style.display='flex';
+}
+
+function closeEditModal() {
+  document.getElementById('entry-edit-modal').style.display='none';
+  _editCtx={};
+}
+
+async function saveEditEntry() {
+  const { type, rowIndex } = _editCtx;
+  if(!type||!rowIndex){showToast('Nothing to save','error');return;}
+  const date       = document.getElementById('edit-date').value;
+  const valueField = document.getElementById('edit-value').value.trim();
+  const waste      = document.getElementById('edit-waste').value.trim();
+  if(!date||!valueField||!waste){showToast('Fill in all fields','error');return;}
+  const btn=document.getElementById('edit-save-btn');
+  btn.disabled=true; btn.textContent='Saving…';
+  try {
+    const url=`${scriptURL}?action=editEntry&package=${selectedPackage}&wasteType=${type}&rowIndex=${rowIndex}`
+      +`&date=${encodeURIComponent(date)}&valueField=${encodeURIComponent(valueField)}&waste=${encodeURIComponent(waste)}`;
+    const res=await authenticatedFetch(url);
+    const d=await res.json();
+    if(d.success){showToast('Entry updated!','success');closeEditModal();loadHistory(type);}
+    else showToast(d.message||'Failed to update','error');
+  } catch(e){showToast('Error saving entry','error');}
+  finally{btn.disabled=false;btn.textContent='Save';}
+}
+
+async function deleteEntry(type, rowIndex) {
+  if(!confirm('Delete this entry?\nThis cannot be undone.'))return;
+  try {
+    const url=`${scriptURL}?action=deleteEntry&package=${selectedPackage}&wasteType=${type}&rowIndex=${rowIndex}`;
+    const res=await authenticatedFetch(url);
+    const d=await res.json();
+    if(d.success){showToast('Entry deleted','success');loadHistory(type);}
+    else showToast(d.message||'Failed to delete','error');
+  } catch(e){showToast('Error deleting entry','error');}
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
