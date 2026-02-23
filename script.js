@@ -447,17 +447,39 @@ function sortUsers(users) {
   });
 }
 
+let _allUsers = []; // cache for client-side filtering
+
 async function loadUsers() {
   try {
     const res   = await authenticatedFetch(`${scriptURL}?action=getUsers`);
     const users = await res.json();
     if (!Array.isArray(users)) { showToast("Failed to load users","error"); return; }
-    const sorted = sortUsers(users);
+    _allUsers = sortUsers(users);
     const p = users.filter(u=>u.status==='Pending').length;
     updatePendingBadge(p);
     lastKnownPendingCount = p;
-    renderUsers(sorted);
+    applyUserFilters(); // render with any active filters
   } catch { showToast("Failed to load users","error"); }
+}
+
+function applyUserFilters() {
+  const search = (document.getElementById('uf-search')?.value || '').toLowerCase().trim();
+  const status = document.getElementById('uf-status')?.value || 'all';
+  const role   = document.getElementById('uf-role')?.value   || 'all';
+
+  let filtered = _allUsers;
+  if (search) filtered = filtered.filter(u => u.email.toLowerCase().includes(search));
+  if (status !== 'all') filtered = filtered.filter(u => u.status === status);
+  if (role   !== 'all') filtered = filtered.filter(u => (u.role || 'user') === role);
+
+  renderUsers(filtered);
+
+  const countEl = document.getElementById('uf-count');
+  if (countEl) {
+    countEl.textContent = filtered.length === _allUsers.length
+      ? `${_allUsers.length} user${_allUsers.length !== 1 ? 's' : ''}`
+      : `${filtered.length} of ${_allUsers.length}`;
+  }
 }
 
 function renderUsers(users) {
@@ -999,7 +1021,7 @@ async function loadHistory(type) {
     dr.forEach((r, idx)=>{
       // r[6] = sheet row index appended by backend (header=row1, data starts at row2)
       // If backend doesn't supply it, we cannot reliably delete/edit — show warning once
-      const rowIndex = (r[7] !== undefined && r[7] !== null && !isNaN(Number(r[7]))) ? Number(r[7]) : null;
+      const rowIndex = (r[6] !== undefined && r[6] !== null && !isNaN(Number(r[6]))) ? Number(r[6]) : null;
       if(rowIndex === null && idx === 0) console.warn('[WMS] Row index missing from backend — update Code.gs fetchEntries to include row index');
       window._entryRowCache[rowIndex] = { type, date: r[0], valueField: r[1], waste: r[2] };
       const date=new Date(r[0]).toLocaleDateString("en-US",{year:"numeric",month:"short",day:"numeric"});
