@@ -201,7 +201,7 @@ async function authenticatedFetch(url, options = {}) {
 }
 
 const DEV_MODE  = false;
-const scriptURL = "https://script.google.com/macros/s/AKfycby4e9PUOmJzsaOaK7q1TEadzPNQAr-NGEkr59ms7O2pC3bwqAVo7PS42G8wJhbobiKSyw/exec";
+const scriptURL = "https://script.google.com/macros/s/AKfycbwMO64qmITNhAm-LIoDQtNzzRe2jNTX96XkbRBgl8BaI9TFl2ZDrUkltB-LkR1Fb2DV/exec";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SESSION
@@ -996,8 +996,11 @@ async function loadHistory(type) {
     // Store row data by rowIndex so onclick never needs to pass raw strings
     window._entryRowCache = {};
     const tb=document.getElementById(`${type}-table-body`); tb.innerHTML='';
-    dr.forEach(r=>{
-      const rowIndex=r[6]; // sheet row index appended by backend
+    dr.forEach((r, idx)=>{
+      // r[6] = sheet row index appended by backend (header=row1, data starts at row2)
+      // If backend doesn't supply it, we cannot reliably delete/edit — show warning once
+      const rowIndex = (r[6] !== undefined && r[6] !== null && !isNaN(Number(r[6]))) ? Number(r[6]) : null;
+      if(rowIndex === null && idx === 0) console.warn('[WMS] Row index missing from backend — update Code.gs fetchEntries to include row index');
       window._entryRowCache[rowIndex] = { type, date: r[0], valueField: r[1], waste: r[2] };
       const date=new Date(r[0]).toLocaleDateString("en-US",{year:"numeric",month:"short",day:"numeric"});
       let img=''; if(r[5]){const m=r[5].match(/\/d\/([^/]+)/);img=m?`https://drive.google.com/uc?export=view&id=${m[1]}`:r[5];}
@@ -1006,7 +1009,8 @@ async function loadHistory(type) {
       const canEdit=isAdmin||(ownerEmail===myEmail);
       const tr=document.createElement("tr");
       tr.innerHTML=`<td>${date}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[4]}</td><td>${link}</td><td><div class="entry-action-cell"></div></td>`;
-      if(canEdit){
+      const cell=tr.querySelector('.entry-action-cell');
+      if(canEdit && rowIndex !== null){
         const editBtn=document.createElement('button');
         editBtn.className='btn-entry-action btn-entry-edit';
         editBtn.textContent='✏️';
@@ -1015,11 +1019,12 @@ async function loadHistory(type) {
         delBtn.className='btn-entry-action btn-entry-delete';
         delBtn.textContent='🗑️';
         delBtn.onclick=()=>deleteEntry(type, rowIndex);
-        const cell=tr.querySelector('.entry-action-cell');
         cell.appendChild(editBtn);
         cell.appendChild(delBtn);
+      } else if(canEdit && rowIndex === null){
+        cell.innerHTML='<span title="Update Code.gs to enable" style="color:#bbb;font-size:0.8rem;">N/A</span>';
       } else {
-        tr.querySelector('.entry-action-cell').textContent='—';
+        cell.textContent='—';
       }
       tb.appendChild(tr);
     });
