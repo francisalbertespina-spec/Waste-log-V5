@@ -999,7 +999,7 @@ async function loadHistory(type) {
     dr.forEach((r, idx)=>{
       // r[6] = sheet row index appended by backend (header=row1, data starts at row2)
       // If backend doesn't supply it, we cannot reliably delete/edit — show warning once
-      const rowIndex = (r[6] !== undefined && r[6] !== null && !isNaN(Number(r[6]))) ? Number(r[6]) : null;
+      const rowIndex = (r[7] !== undefined && r[7] !== null && !isNaN(Number(r[7]))) ? Number(r[7]) : null;
       if(rowIndex === null && idx === 0) console.warn('[WMS] Row index missing from backend — update Code.gs fetchEntries to include row index');
       window._entryRowCache[rowIndex] = { type, date: r[0], valueField: r[1], waste: r[2] };
       const date=new Date(r[0]).toLocaleDateString("en-US",{year:"numeric",month:"short",day:"numeric"});
