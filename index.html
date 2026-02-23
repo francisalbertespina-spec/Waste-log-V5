@@ -192,7 +192,7 @@
       </div>
       <div id="hazardous-loading" style="display:none;"><div class="spinner"></div><p style="text-align:center;color:#666;">Loading…</p></div>
       <div class="table-wrapper" id="hazardous-table-container" style="display:none;">
-        <table><thead><tr><th>Date</th><th>kg</th><th>Waste</th><th>User</th><th>Photo</th></tr></thead><tbody id="hazardous-table-body"></tbody></table>
+        <table><thead><tr><th>Date</th><th>kg</th><th>Waste</th><th>User</th><th>Photo</th><th>Actions</th></tr></thead><tbody id="hazardous-table-body"></tbody></table>
       </div>
       <div id="hazardous-empty-state" class="empty-state"><div class="icon">📋</div><p><strong>No records</strong></p><p style="font-size:.9rem;">Select a date range and click Load</p></div>
     </div>
@@ -219,7 +219,7 @@
       </div>
       <div id="solid-loading" style="display:none;"><div class="spinner"></div><p style="text-align:center;color:#666;">Loading…</p></div>
       <div class="table-wrapper" id="solid-table-container" style="display:none;">
-        <table><thead><tr><th>Date</th><th>Location</th><th>Waste</th><th>User</th><th>Photo</th></tr></thead><tbody id="solid-table-body"></tbody></table>
+        <table><thead><tr><th>Date</th><th>Location</th><th>Waste</th><th>User</th><th>Photo</th><th>Actions</th></tr></thead><tbody id="solid-table-body"></tbody></table>
       </div>
       <div id="solid-empty-state" class="empty-state"><div class="icon">📋</div><p><strong>No records</strong></p><p style="font-size:.9rem;">Select a date range and click Load</p></div>
     </div>
@@ -411,5 +411,29 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="script.js"></script>
+
+  <!-- ═══ ENTRY EDIT MODAL ═══ -->
+  <div id="entry-edit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);justify-content:center;align-items:center;z-index:9998;">
+    <div style="background:var(--bg,#fff);border-radius:16px;padding:24px;width:90%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+      <h3 id="edit-modal-title" style="margin-bottom:18px;color:var(--text,#333);font-size:1.1rem;">Edit Entry</h3>
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" id="edit-date">
+      </div>
+      <div class="form-group">
+        <label id="edit-label-value">Value</label>
+        <input type="text" id="edit-value" placeholder="Enter value">
+      </div>
+      <div class="form-group">
+        <label>Waste Type</label>
+        <input type="text" id="edit-waste" placeholder="Waste type">
+      </div>
+      <div style="display:flex;gap:10px;margin-top:8px;">
+        <button id="edit-save-btn" class="btn btn-primary" style="flex:1;" onclick="saveEditEntry()">Save</button>
+        <button class="btn btn-secondary" style="flex:1;" onclick="closeEditModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>
