@@ -577,3 +577,307 @@ td a.photo-link { color:#2563eb; cursor:pointer; text-decoration:underline; }
   .admin-card { padding:18px 13px; }
   .analytics-filters { grid-template-columns:1fr; }
 }
+
+/* ═══════════════════════════════════════════════════════
+   DESKTOP / WEB LAYOUT  (≥ 900px)
+   The mobile layout is completely unchanged.
+   On desktop we add a sidebar + wider content area.
+═══════════════════════════════════════════════════════ */
+
+@media (min-width: 900px) {
+
+  /* ── Body & outer shell ── */
+  body {
+    padding: 0;
+    align-items: stretch;
+    min-height: 100vh;
+  }
+
+  .app-container {
+    max-width: 100%;
+    width: 100%;
+    min-height: 100vh;
+    border-radius: 0;
+    box-shadow: none;
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    grid-template-rows: auto 1fr auto;
+    grid-template-areas:
+      "sidebar header"
+      "sidebar content"
+      "sidebar footer";
+    animation: none;
+  }
+
+  /* ── Header becomes a top bar (right side only) ── */
+  .header {
+    grid-area: header;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 32px;
+    text-align: left;
+    gap: 20px;
+  }
+
+  .header .logo { width: 44px; height: 44px; margin: 0; flex-shrink: 0; }
+  .header h1    { font-size: 1.15rem; margin: 0; }
+  .header > p   { display: none; } /* hide tagline on desktop */
+
+  .user-info {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    margin-left: auto;
+  }
+
+  .user-badge-row { gap: 12px; }
+
+  /* ── Sidebar ── */
+  .desktop-sidebar {
+    grid-area: sidebar;
+    background: linear-gradient(180deg, #c62828 0%, #b71c1c 100%);
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    min-height: 100vh;
+  }
+
+  .sidebar-brand {
+    padding: 28px 22px 22px;
+    border-bottom: 1px solid rgba(255,255,255,0.15);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .sidebar-brand img {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  }
+
+  .sidebar-brand-name {
+    color: white;
+    font-weight: 800;
+    font-size: 0.95rem;
+    text-align: center;
+    line-height: 1.3;
+  }
+
+  .sidebar-brand-sub {
+    color: rgba(255,255,255,0.65);
+    font-size: 0.73rem;
+    text-align: center;
+  }
+
+  .sidebar-nav {
+    flex: 1;
+    padding: 16px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .sidebar-section-label {
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: rgba(255,255,255,0.45);
+    padding: 10px 10px 4px;
+    margin-top: 6px;
+  }
+
+  .sidebar-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 10px 13px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: rgba(255,255,255,0.75);
+    font-size: 0.9rem;
+    font-weight: 500;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+  }
+
+  .sidebar-nav-item:hover {
+    background: rgba(255,255,255,0.15);
+    color: white;
+  }
+
+  .sidebar-nav-item.active {
+    background: rgba(255,255,255,0.22);
+    color: white;
+    font-weight: 700;
+  }
+
+  .sidebar-nav-item .nav-icon { font-size: 1.1rem; width: 22px; text-align: center; flex-shrink: 0; }
+  .sidebar-nav-item .nav-label { flex: 1; }
+
+  .sidebar-nav-item .nav-badge {
+    background: #ff1744;
+    color: white;
+    border-radius: 10px;
+    min-width: 18px;
+    height: 18px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+  }
+
+  .sidebar-nav-item .nav-badge.visible { display: flex; }
+
+  .sidebar-divider {
+    height: 1px;
+    background: rgba(255,255,255,0.12);
+    margin: 8px 10px;
+  }
+
+  .sidebar-footer {
+    padding: 16px 12px;
+    border-top: 1px solid rgba(255,255,255,0.12);
+  }
+
+  .sidebar-footer .sidebar-nav-item { color: rgba(255,255,255,0.6); }
+  .sidebar-footer .sidebar-nav-item:hover { color: white; }
+
+  /* ── Content area ── */
+  .content {
+    grid-area: content;
+    padding: 32px 40px;
+    background: var(--bg2);
+    overflow-y: auto;
+  }
+
+  body.theme-dark .content { background: var(--bg2); }
+
+  /* ── Footer ── */
+  .footer {
+    grid-area: footer;
+    border-left: 1px solid rgba(255,255,255,0.12);
+    background: linear-gradient(180deg, #c62828 0%, #b71c1c 100%);
+    color: rgba(255,255,255,0.5);
+    border-top: none;
+    font-size: 0.72rem;
+    padding: 12px 22px;
+    text-align: center;
+  }
+
+  .footer strong { color: rgba(255,255,255,0.75); }
+
+  /* ── Section & card shell ── */
+  .section.active {
+    background: var(--bg2);
+  }
+
+  /* wrap most sections in a white card */
+  .section-card-wrap {
+    background: var(--bg);
+    border-radius: var(--radius-lg);
+    padding: 32px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    border: 1px solid var(--border);
+    max-width: 900px;
+  }
+
+  body.theme-dark .section-card-wrap {
+    background: var(--bg-card);
+  }
+
+  /* ── Section titles left-aligned on desktop ── */
+  .section-title, .section-sub { text-align: left; }
+
+  /* ── Back button hidden — sidebar handles nav ── */
+  .back-btn { display: none; }
+  .breadcrumb { display: none; }
+
+  /* ── Package grid — larger cards ── */
+  .package-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+    margin: 24px 0;
+  }
+
+  .package-card { padding: 30px 18px; }
+  .package-card .icon { font-size: 2.8rem; }
+  .package-card .name { font-size: 1.1rem; }
+
+  /* ── Buttons — auto width on desktop, not full-width ── */
+  .btn { width: auto; min-width: 160px; padding: 0 28px; }
+  .btn-group { display: flex; gap: 12px; flex-wrap: wrap; }
+
+  /* ── Menu buttons — two columns on desktop ── */
+  .menu-grid { grid-template-columns: 1fr 1fr; gap: 14px; }
+
+  /* ── Forms — two column layout ── */
+  .form-two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 24px;
+  }
+
+  /* ── Filter bar — horizontal ── */
+  .filter-bar {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+
+  .analytics-filters {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  /* ── History tables — more room ── */
+  .table-wrapper { border-radius: var(--radius-lg); }
+  table { font-size: 0.88rem; }
+  th, td { padding: 10px 12px; }
+
+  /* ── KPI grid — 4 columns ── */
+  .kpi-grid { grid-template-columns: repeat(4, 1fr); }
+
+  /* ── Admin table wider ── */
+  .admin-table { min-width: unset; font-size: 0.88rem; }
+
+  /* ── Analytics chart taller ── */
+  .chart-wrap { height: 280px; }
+
+  /* ── Settings wider ── */
+  .settings-card { max-width: 700px; }
+  .settings-value { max-width: 70%; }
+
+  /* ── Admin dashboard grid ── */
+  .admin-menu-grid { grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .admin-menu-card { padding: 28px 18px; }
+
+  /* ── User management filter responsive ── */
+  .user-filter-bar { flex-wrap: nowrap; }
+  .filter-select { min-width: 150px; }
+
+  /* ── Hide mobile-only elements ── */
+  .mobile-only { display: none !important; }
+
+  /* ── Admin-only visibility override for desktop ── */
+  body.is-admin .section.admin-only.active { display: block !important; }
+}
+
+/* ── Extra wide screens ── */
+@media (min-width: 1280px) {
+  .app-container { grid-template-columns: 280px 1fr; }
+  .content { padding: 36px 56px; }
+  .section-card-wrap { max-width: 1050px; }
+  .analytics-filters { grid-template-columns: repeat(5, 1fr); }
+  .kpi-grid { grid-template-columns: repeat(4, 1fr); }
+}
