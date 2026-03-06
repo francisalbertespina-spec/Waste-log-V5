@@ -11,6 +11,72 @@
 <body>
 <div class="app-container">
 
+  <!-- ═══ DESKTOP SIDEBAR (hidden on mobile via CSS) ═══ -->
+  <aside class="desktop-sidebar" id="desktop-sidebar" style="display:none;">
+    <div class="sidebar-brand">
+      <img src="logo.png" alt="Logo" onerror="this.style.display='none'">
+      <div class="sidebar-brand-name">WMS</div>
+      <div class="sidebar-brand-sub">HDJV Environmental Management</div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <!-- Package selector shown inline on desktop -->
+      <div class="sidebar-section-label">Package</div>
+      <button class="sidebar-nav-item" id="sb-pkg-p4" onclick="sidebarSelectPackage('P4')">
+        <span class="nav-icon">📦</span><span class="nav-label">Package 4</span>
+      </button>
+      <button class="sidebar-nav-item" id="sb-pkg-p5" onclick="sidebarSelectPackage('P5')">
+        <span class="nav-icon">📦</span><span class="nav-label">Package 5</span>
+      </button>
+      <button class="sidebar-nav-item" id="sb-pkg-p6" onclick="sidebarSelectPackage('P6')">
+        <span class="nav-icon">📦</span><span class="nav-label">Package 6</span>
+      </button>
+
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-section-label" id="sb-waste-label" style="display:none;">Hazardous Waste</div>
+      <button class="sidebar-nav-item" id="sb-haz-log" style="display:none;" onclick="sidebarNav('hazardous','log')">
+        <span class="nav-icon">✏️</span><span class="nav-label">Log Hazardous</span>
+      </button>
+      <button class="sidebar-nav-item" id="sb-haz-records" style="display:none;" onclick="sidebarNav('hazardous','records')">
+        <span class="nav-icon">📋</span><span class="nav-label">Hazardous Records</span>
+      </button>
+
+      <div class="sidebar-section-label" id="sb-solid-label" style="display:none;">Solid Waste</div>
+      <button class="sidebar-nav-item" id="sb-solid-log" style="display:none;" onclick="sidebarNav('solid','log')">
+        <span class="nav-icon">✏️</span><span class="nav-label">Log Solid</span>
+      </button>
+      <button class="sidebar-nav-item" id="sb-solid-records" style="display:none;" onclick="sidebarNav('solid','records')">
+        <span class="nav-icon">📋</span><span class="nav-label">Solid Records</span>
+      </button>
+
+      <!-- Admin nav items — shown only when is-admin -->
+      <div class="sidebar-divider admin-only"></div>
+      <div class="sidebar-section-label admin-only">Admin</div>
+      <button class="sidebar-nav-item admin-only" onclick="showSection('admin-dashboard')">
+        <span class="nav-icon">🛡️</span><span class="nav-label">Dashboard</span>
+      </button>
+      <button class="sidebar-nav-item admin-only" onclick="showUserManagement()">
+        <span class="nav-icon">👥</span><span class="nav-label">Users</span>
+        <span class="nav-badge" id="sb-pending-badge">0</span>
+      </button>
+      <button class="sidebar-nav-item admin-only" onclick="showAnalytics()">
+        <span class="nav-icon">📊</span><span class="nav-label">Analytics</span>
+      </button>
+      <button class="sidebar-nav-item admin-only" onclick="showRequestLogs()">
+        <span class="nav-icon">📝</span><span class="nav-label">Request Logs</span>
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="sidebar-nav-item" onclick="showUserSettings()">
+        <span class="nav-icon">⚙️</span><span class="nav-label">Settings</span>
+      </button>
+      <button class="sidebar-nav-item" onclick="logout()">
+        <span class="nav-icon">🚪</span><span class="nav-label">Sign Out</span>
+      </button>
+    </div>
+  </aside>
+
   <!-- ═══ HEADER ═══ -->
   <div class="header">
     <img src="logo.png" alt="Logo" class="logo" onerror="this.style.display='none'">
@@ -30,8 +96,8 @@
         </button>
       </div>
 
-      <!-- Admin mode toggle -->
-      <div id="mode-toggle" class="mode-toggle admin-only" style="display:none;">
+      <!-- Admin mode toggle (mobile only — desktop uses sidebar) -->
+      <div id="mode-toggle" class="mode-toggle admin-only mobile-only" style="display:none;">
         <span class="mode-label" id="mode-label-user">User</span>
         <label class="toggle-switch">
           <input type="checkbox" id="admin-mode-toggle" onchange="toggleAdminMode()">
@@ -46,118 +112,138 @@
 
     <!-- ═══ LOGIN ═══ -->
     <div id="login-section" class="section active">
-      <h2 class="section-title">Welcome</h2>
-      <p class="section-sub">Sign in with your authorized Google account to continue</p>
-      <div id="loginWrapper">
-        <div id="buttonDiv" style="display:flex;justify-content:center;"></div>
-        <div id="loginLoadingUI" class="login-loading-ui">
-          <div class="login-spinner"></div>
-          <p>Signing you in…</p>
+      <div class="section-card-wrap">
+        <h2 class="section-title">Welcome</h2>
+        <p class="section-sub">Sign in with your authorized Google account to continue</p>
+        <div id="loginWrapper">
+          <div id="buttonDiv" style="display:flex;justify-content:center;"></div>
+          <div id="loginLoadingUI" class="login-loading-ui">
+            <div class="login-spinner"></div>
+            <p>Signing you in…</p>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- ═══ PACKAGE ═══ -->
     <div id="package-section" class="section">
-      <h2 class="section-title">Select Package</h2>
-      <p class="section-sub">Choose the package you want to work with</p>
-      <div class="package-grid">
-        <div class="package-card" onclick="selectPackage('P4',this)"><div class="icon">📦</div><div class="name">Package 4</div></div>
-        <div class="package-card" onclick="selectPackage('P5',this)"><div class="icon">📦</div><div class="name">Package 5</div></div>
-        <div class="package-card" onclick="selectPackage('P6',this)"><div class="icon">📦</div><div class="name">Package 6</div></div>
+      <div class="section-card-wrap">
+        <h2 class="section-title">Select Package</h2>
+        <p class="section-sub">Choose the package you want to work with</p>
+        <div class="package-grid">
+          <div class="package-card" onclick="selectPackage('P4',this)"><div class="icon">📦</div><div class="name">Package 4</div></div>
+          <div class="package-card" onclick="selectPackage('P5',this)"><div class="icon">📦</div><div class="name">Package 5</div></div>
+          <div class="package-card" onclick="selectPackage('P6',this)"><div class="icon">📦</div><div class="name">Package 6</div></div>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-primary" onclick="confirmPackage()">Continue →</button>
+          <button class="btn btn-secondary mobile-only" onclick="showUserSettings()">⚙️ My Settings</button>
+          <button class="btn btn-secondary mobile-only" onclick="logout()">Sign Out</button>
+        </div>
       </div>
-      <button class="btn btn-primary" onclick="confirmPackage()">Continue</button>
-      <button class="btn btn-secondary" onclick="showUserSettings()" style="margin-top:10px;">⚙️ My Settings</button>
-      <button class="btn btn-secondary" onclick="logout()" style="margin-top:10px;">Sign Out</button>
     </div>
 
     <!-- ═══ WASTE TYPE ═══ -->
     <div id="waste-type-section" class="section">
-      <button class="back-btn" onclick="backToPackage()">← Back to Packages</button>
-      <div class="breadcrumb"><span class="breadcrumb-item" onclick="backToPackage()">Packages</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item active" id="waste-type-package"></span></div>
-      <h2 class="section-title">Select Waste Type</h2>
-      <div class="menu-grid">
-        <div class="menu-btn" onclick="selectWasteType('hazardous')"><div class="icon">☢️</div><div class="text"><h3>Hazardous Waste</h3><p>Chemical, toxic, and hazardous materials</p></div><div class="arrow">→</div></div>
-        <div class="menu-btn" onclick="selectWasteType('solid')"><div class="icon">🗑️</div><div class="text"><h3>Solid Waste</h3><p>Residual and scrap materials</p></div><div class="arrow">→</div></div>
+      <div class="section-card-wrap">
+        <button class="back-btn" onclick="backToPackage()">← Back to Packages</button>
+        <div class="breadcrumb"><span class="breadcrumb-item" onclick="backToPackage()">Packages</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item active" id="waste-type-package"></span></div>
+        <h2 class="section-title">Select Waste Type</h2>
+        <div class="menu-grid">
+          <div class="menu-btn" onclick="selectWasteType('hazardous')"><div class="icon">☢️</div><div class="text"><h3>Hazardous Waste</h3><p>Chemical, toxic, and hazardous materials</p></div><div class="arrow">→</div></div>
+          <div class="menu-btn" onclick="selectWasteType('solid')"><div class="icon">🗑️</div><div class="text"><h3>Solid Waste</h3><p>Residual and scrap materials</p></div><div class="arrow">→</div></div>
+        </div>
       </div>
     </div>
 
     <!-- ═══ HAZARDOUS MENU ═══ -->
     <div id="hazardous-menu-section" class="section">
-      <button class="back-btn" onclick="backToWasteType()">← Back</button>
-      <div class="breadcrumb"><span class="breadcrumb-item" onclick="backToPackage()">Packages</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToWasteType()" id="hazardous-menu-package"></span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item active">Hazardous</span></div>
-      <h2 class="section-title">Hazardous Waste</h2>
-      <div class="menu-grid">
-        <div class="menu-btn" onclick="showLogForm('hazardous')"><div class="icon">✏️</div><div class="text"><h3>Log New Entry</h3><p>Record new waste disposal</p></div><div class="arrow">→</div></div>
-        <div class="menu-btn" onclick="showHistoryView('hazardous')"><div class="icon">📊</div><div class="text"><h3>View Records</h3><p>Browse & export entries</p></div><div class="arrow">→</div></div>
+      <div class="section-card-wrap">
+        <button class="back-btn" onclick="backToWasteType()">← Back</button>
+        <div class="breadcrumb"><span class="breadcrumb-item" onclick="backToPackage()">Packages</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToWasteType()" id="hazardous-menu-package"></span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item active">Hazardous</span></div>
+        <h2 class="section-title">Hazardous Waste</h2>
+        <div class="menu-grid">
+          <div class="menu-btn" onclick="showLogForm('hazardous')"><div class="icon">✏️</div><div class="text"><h3>Log New Entry</h3><p>Record new waste disposal</p></div><div class="arrow">→</div></div>
+          <div class="menu-btn" onclick="showHistoryView('hazardous')"><div class="icon">📊</div><div class="text"><h3>View Records</h3><p>Browse & export entries</p></div><div class="arrow">→</div></div>
+        </div>
       </div>
     </div>
 
     <!-- ═══ SOLID MENU ═══ -->
     <div id="solid-menu-section" class="section">
-      <button class="back-btn" onclick="backToWasteType()">← Back</button>
-      <div class="breadcrumb"><span class="breadcrumb-item" onclick="backToPackage()">Packages</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToWasteType()" id="solid-menu-package"></span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item active">Solid</span></div>
-      <h2 class="section-title">Solid Waste</h2>
-      <div class="menu-grid">
-        <div class="menu-btn" onclick="showLogForm('solid')"><div class="icon">✏️</div><div class="text"><h3>Log New Entry</h3><p>Record new waste disposal</p></div><div class="arrow">→</div></div>
-        <div class="menu-btn" onclick="showHistoryView('solid')"><div class="icon">📊</div><div class="text"><h3>View Records</h3><p>Browse & export entries</p></div><div class="arrow">→</div></div>
+      <div class="section-card-wrap">
+        <button class="back-btn" onclick="backToWasteType()">← Back</button>
+        <div class="breadcrumb"><span class="breadcrumb-item" onclick="backToPackage()">Packages</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToWasteType()" id="solid-menu-package"></span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item active">Solid</span></div>
+        <h2 class="section-title">Solid Waste</h2>
+        <div class="menu-grid">
+          <div class="menu-btn" onclick="showLogForm('solid')"><div class="icon">✏️</div><div class="text"><h3>Log New Entry</h3><p>Record new waste disposal</p></div><div class="arrow">→</div></div>
+          <div class="menu-btn" onclick="showHistoryView('solid')"><div class="icon">📊</div><div class="text"><h3>View Records</h3><p>Browse & export entries</p></div><div class="arrow">→</div></div>
+        </div>
       </div>
     </div>
 
     <!-- ═══ HAZARDOUS FORM ═══ -->
     <div id="hazardous-form-section" class="section">
-      <button class="back-btn" onclick="backToHazardousMenu()">← Back</button>
-      <div class="breadcrumb"><span class="breadcrumb-item" onclick="backToPackage()">Packages</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToWasteType()" id="hazardous-form-package"></span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToHazardousMenu()">Hazardous</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item active">New Entry</span></div>
-      <h2 class="section-title">New Hazardous Entry</h2>
-      <div class="form-group" id="hazardous-date-group"><label>Date</label><input type="date" id="hazardous-date"><div class="error-msg">Please select a date</div></div>
-      <div class="form-group" id="hazardous-volume-group"><label>Volume (kg)</label><input type="number" step="0.00001" id="hazardous-volume" placeholder="0.00000"><div class="error-msg">Please enter a volume</div></div>
-      <div class="form-group" id="hazardous-waste-group">
-        <label>Waste Name</label>
-        <select id="hazardous-waste">
-          <option value="">-- Select Waste Type --</option>
-          <option value="Used Oil">Used Oil</option>
-          <option value="Pathological and Infectious Waste">Pathological and Infectious Waste</option>
-          <option value="Lead Compounds">Lead Compounds</option>
-          <option value="Oil Contaminated Materials">Oil Contaminated Materials</option>
-          <option value="Grease Waste">Grease Waste</option>
-          <option value="Waste Electrical and Electronic Equipment">Waste Electrical and Electronic Equipment</option>
-          <option value="Mercury and Mercury Compounds">Mercury and Mercury Compounds</option>
-          <option value="Containers Previously containing toxic chemical substances">Containers Previously containing toxic chemical substances</option>
-        </select>
-        <div class="error-msg">Please select a waste type</div>
-      </div>
-      <div class="form-group" id="hazardous-photo-group">
-        <label>Photo Proof</label>
-        <div class="photo-upload" onclick="document.getElementById('hazardous-photo').click()">
-          <input type="file" id="hazardous-photo" accept="image/*" capture="environment" onchange="previewImage(event,'hazardous')">
-          <div class="placeholder"><div class="icon">📷</div><p><strong>Tap to capture photo</strong></p><p style="font-size:.85rem;color:#999;margin-top:5px;">Required for verification</p></div>
+      <div class="section-card-wrap">
+        <button class="back-btn" onclick="backToHazardousMenu()">← Back</button>
+        <div class="breadcrumb"><span class="breadcrumb-item" onclick="backToPackage()">Packages</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToWasteType()" id="hazardous-form-package"></span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToHazardousMenu()">Hazardous</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item active">New Entry</span></div>
+        <h2 class="section-title">New Hazardous Entry</h2>
+        <div class="form-two-col">
+          <div class="form-group" id="hazardous-date-group"><label>Date</label><input type="date" id="hazardous-date"><div class="error-msg">Please select a date</div></div>
+          <div class="form-group" id="hazardous-volume-group"><label>Volume (kg)</label><input type="number" step="0.00001" id="hazardous-volume" placeholder="0.00000"><div class="error-msg">Please enter a volume</div></div>
+          <div class="form-group" id="hazardous-waste-group">
+            <label>Waste Name</label>
+            <select id="hazardous-waste">
+              <option value="">-- Select Waste Type --</option>
+              <option value="Used Oil">Used Oil</option>
+              <option value="Pathological and Infectious Waste">Pathological and Infectious Waste</option>
+              <option value="Lead Compounds">Lead Compounds</option>
+              <option value="Oil Contaminated Materials">Oil Contaminated Materials</option>
+              <option value="Grease Waste">Grease Waste</option>
+              <option value="Waste Electrical and Electronic Equipment">Waste Electrical and Electronic Equipment</option>
+              <option value="Mercury and Mercury Compounds">Mercury and Mercury Compounds</option>
+              <option value="Containers Previously containing toxic chemical substances">Containers Previously containing toxic chemical substances</option>
+            </select>
+            <div class="error-msg">Please select a waste type</div>
+          </div>
+          <div class="form-group" id="hazardous-photo-group">
+            <label>Photo Proof</label>
+            <div class="photo-upload" onclick="document.getElementById('hazardous-photo').click()">
+              <input type="file" id="hazardous-photo" accept="image/*" capture="environment" onchange="previewImage(event,'hazardous')">
+              <div class="placeholder"><div class="icon">📷</div><p><strong>Tap to capture photo</strong></p><p style="font-size:.85rem;color:#999;margin-top:5px;">Required for verification</p></div>
+            </div>
+            <div class="error-msg">Please upload a photo</div>
+          </div>
         </div>
-        <div class="error-msg">Please upload a photo</div>
+        <div class="btn-group"><button id="hazardous-submitBtn" class="btn btn-primary" onclick="addEntry('hazardous')">Submit Entry</button></div>
       </div>
-      <div class="btn-group"><button id="hazardous-submitBtn" class="btn btn-primary" onclick="addEntry('hazardous')">Submit Entry</button></div>
     </div>
 
     <!-- ═══ SOLID FORM ═══ -->
     <div id="solid-form-section" class="section">
-      <button class="back-btn" onclick="backToSolidMenu()">← Back</button>
-      <div class="breadcrumb"><span class="breadcrumb-item" onclick="backToPackage()">Packages</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToWasteType()" id="solid-form-package"></span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToSolidMenu()">Solid</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item active">New Entry</span></div>
-      <h2 class="section-title">New Solid Entry</h2>
-      <div class="form-group" id="solid-date-group"><label>Date</label><input type="date" id="solid-date"><div class="error-msg">Please select a date</div></div>
-      <div class="form-group" id="solid-location-group">
-        <label>Location (Pier Number)</label>
-        <div style="display:flex;align-items:center;gap:10px;"><span style="font-size:1.1rem;font-weight:600;color:#555;">P-</span><input type="number" id="solid-location" placeholder="462" min="462" max="1260" style="flex:1;"></div>
-        <div class="error-msg">Please enter a pier number (462–1260)</div>
-      </div>
-      <div class="form-group" id="solid-waste-group"><label>Waste Name</label><select id="solid-waste"><option value="">-- Select Waste Type --</option><option value="Residual">Residual</option><option value="Scrap">Scrap</option></select><div class="error-msg">Please select a waste type</div></div>
-      <div class="form-group" id="solid-photo-group">
-        <label>Photo Proof</label>
-        <div class="photo-upload" onclick="document.getElementById('solid-photo').click()">
-          <input type="file" id="solid-photo" accept="image/*" capture="environment" onchange="previewImage(event,'solid')">
-          <div class="placeholder"><div class="icon">📷</div><p><strong>Tap to capture photo</strong></p><p style="font-size:.85rem;color:#999;margin-top:5px;">Required for verification</p></div>
+      <div class="section-card-wrap">
+        <button class="back-btn" onclick="backToSolidMenu()">← Back</button>
+        <div class="breadcrumb"><span class="breadcrumb-item" onclick="backToPackage()">Packages</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToWasteType()" id="solid-form-package"></span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToSolidMenu()">Solid</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item active">New Entry</span></div>
+        <h2 class="section-title">New Solid Entry</h2>
+        <div class="form-two-col">
+          <div class="form-group" id="solid-date-group"><label>Date</label><input type="date" id="solid-date"><div class="error-msg">Please select a date</div></div>
+          <div class="form-group" id="solid-location-group">
+            <label>Location (Pier Number)</label>
+            <div style="display:flex;align-items:center;gap:10px;"><span style="font-size:1.1rem;font-weight:600;color:#555;">P-</span><input type="number" id="solid-location" placeholder="462" min="462" max="1260" style="flex:1;"></div>
+            <div class="error-msg">Please enter a pier number (462–1260)</div>
+          </div>
+          <div class="form-group" id="solid-waste-group"><label>Waste Name</label><select id="solid-waste"><option value="">-- Select Waste Type --</option><option value="Residual">Residual</option><option value="Scrap">Scrap</option></select><div class="error-msg">Please select a waste type</div></div>
+          <div class="form-group" id="solid-photo-group">
+            <label>Photo Proof</label>
+            <div class="photo-upload" onclick="document.getElementById('solid-photo').click()">
+              <input type="file" id="solid-photo" accept="image/*" capture="environment" onchange="previewImage(event,'solid')">
+              <div class="placeholder"><div class="icon">📷</div><p><strong>Tap to capture photo</strong></p><p style="font-size:.85rem;color:#999;margin-top:5px;">Required for verification</p></div>
+            </div>
+            <div class="error-msg">Please upload a photo</div>
+          </div>
         </div>
-        <div class="error-msg">Please upload a photo</div>
+        <div class="btn-group"><button id="solid-submitBtn" class="btn btn-primary" onclick="addEntry('solid')">Submit Entry</button></div>
       </div>
-      <div class="btn-group"><button id="solid-submitBtn" class="btn btn-primary" onclick="addEntry('solid')">Submit Entry</button></div>
     </div>
 
     <!-- ═══ HAZARDOUS HISTORY ═══ -->
