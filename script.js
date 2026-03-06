@@ -1549,3 +1549,131 @@ window.onload=async function(){
 
 function openImageModal(url){const m=url.match(/[-\w]{25,}/);if(!m){showToast("Invalid link","error");return;}document.getElementById("modalImage").src=`https://drive.google.com/thumbnail?id=${m[0]}&sz=w1200`;document.getElementById("imageModal").style.display="flex";}
 function closeImageModal(){document.getElementById("imageModal").style.display="none";document.getElementById("modalImage").src="";}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DESKTOP SIDEBAR LOGIC
+// ═══════════════════════════════════════════════════════════════════════════
+
+const DESKTOP_BP = 900; // px — matches CSS breakpoint
+
+function isDesktop() { return window.innerWidth >= DESKTOP_BP; }
+
+function initDesktopLayout() {
+  const sidebar = document.getElementById('desktop-sidebar');
+  if (!sidebar) return;
+  if (isDesktop()) {
+    sidebar.style.display = 'flex';
+    sidebar.style.flexDirection = 'column';
+  } else {
+    sidebar.style.display = 'none';
+  }
+}
+
+// Update sidebar active state whenever section changes
+const _origShowSection = showSection;
+window.showSection = function(id) {
+  _origShowSection(id);
+  updateSidebarActiveState(id);
+};
+
+function updateSidebarActiveState(id) {
+  document.querySelectorAll('.sidebar-nav-item').forEach(el => el.classList.remove('active'));
+  const map = {
+    'package-section':           'sb-pkg-p4',   // generic fallback
+    'hazardous-form-section':    'sb-haz-log',
+    'hazardous-history-section': 'sb-haz-records',
+    'solid-form-section':        'sb-solid-log',
+    'solid-history-section':     'sb-solid-records',
+    'admin-dashboard':           null,
+    'user-management-section':   null,
+    'analytics-section':         null,
+    'request-logs-section':      null,
+  };
+  const targetId = map[id];
+  if (targetId) {
+    const el = document.getElementById(targetId);
+    if (el) el.classList.add('active');
+  }
+  // highlight correct package button
+  if (selectedPackage) {
+    const pkgEl = document.getElementById(`sb-pkg-${selectedPackage.toLowerCase()}`);
+    if (pkgEl) pkgEl.classList.add('active');
+  }
+  // show/hide waste nav items
+  updateSidebarWasteItems();
+}
+
+function updateSidebarWasteItems() {
+  const hasPackage = !!selectedPackage;
+  ['sb-waste-label','sb-haz-log','sb-haz-records','sb-solid-label','sb-solid-log','sb-solid-records'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = hasPackage ? '' : 'none';
+  });
+}
+
+// Sidebar: select package and go straight to waste type section
+function sidebarSelectPackage(pkg) {
+  // Update package cards too so mobile is consistent
+  const cards = document.querySelectorAll('.package-card');
+  cards.forEach(c => {
+    c.classList.remove('selected');
+    if (c.querySelector('.name')?.textContent === `Package ${pkg.replace('P','')}`) {
+      c.classList.add('selected');
+    }
+  });
+  selectedPackage = pkg;
+  updateBreadcrumbs();
+  updateSidebarWasteItems();
+  // Highlight the clicked sidebar pkg item
+  ['p4','p5','p6'].forEach(p => {
+    const el = document.getElementById(`sb-pkg-${p}`);
+    if (el) el.classList.toggle('active', `P${p.toUpperCase().replace('P','')}` === pkg || `sb-pkg-${p}` === `sb-pkg-${pkg.toLowerCase()}`);
+  });
+  document.getElementById(`sb-pkg-${pkg.toLowerCase()}`)?.classList.add('active');
+  // On desktop skip the package section, go straight to waste type
+  if (isDesktop()) {
+    showSection('waste-type-section');
+  } else {
+    showSection('package-section');
+  }
+}
+
+// Sidebar: direct navigation to log/records
+function sidebarNav(type, action) {
+  if (!selectedPackage) { showToast('Select a package first','error'); return; }
+  if (action === 'log') {
+    showLogForm(type);
+  } else {
+    showHistoryView(type);
+  }
+}
+
+// Override updatePendingBadge to also update sidebar badge
+const _origUpdatePendingBadge = updatePendingBadge;
+window.updatePendingBadge = function(count) {
+  _origUpdatePendingBadge(count);
+  const sbBadge = document.getElementById('sb-pending-badge');
+  if (sbBadge) {
+    sbBadge.textContent = count > 99 ? '99+' : count;
+    sbBadge.classList.toggle('visible', count > 0);
+  }
+};
+
+// Override enableAdminUI to also show sidebar admin items
+const _origEnableAdminUI = enableAdminUI;
+window.enableAdminUI = function() {
+  _origEnableAdminUI();
+  // Admin-only sidebar items are handled by the existing .admin-only CSS rule
+  // which checks body.is-admin — so this works automatically
+};
+
+// On resize, show/hide sidebar
+window.addEventListener('resize', () => {
+  initDesktopLayout();
+  updateSidebarActiveState(document.querySelector('.section.active')?.id || '');
+});
+
+// Init on load
+document.addEventListener('DOMContentLoaded', () => {
+  initDesktopLayout();
+});
