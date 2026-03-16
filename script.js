@@ -1006,7 +1006,17 @@ async function submitEntry(type, fields, btn) {
     const res=await authenticatedFetch(scriptURL,{method:'POST',body:JSON.stringify(payload),signal:ctrl.signal});
     const data=await res.json();
     if(activeToast)dismissToast(activeToast);
-    if(data.success||data.error==='Duplicate request'){markSubmissionAsCompleted(fpKey);showToast('Entry submitted!','success');resetForm(type);}
+    if(data.success||data.error==='Duplicate request'){
+      markSubmissionAsCompleted(fpKey);
+      // #10 Auto-save last used form values before reset
+      if (type === 'hazardous') {
+        saveLastFormValues('hazardous', { waste: fields.waste });
+      } else {
+        saveLastFormValues('solid', { waste: fields.waste, location: fields.location });
+      }
+      showToast('Entry submitted!','success');
+      resetForm(type);
+    }
     else{setTimeout(()=>submissionFingerprints.delete(fpKey),30000);showToast(data.error||'Failed','error');}
   } catch(e) {
     if(activeToast)dismissToast(activeToast);
@@ -1113,7 +1123,25 @@ function openEditModal(type, rowIndex) {
   const yyyy=d.getFullYear(), mm=String(d.getMonth()+1).padStart(2,'0'), dd=String(d.getDate()).padStart(2,'0');
   document.getElementById('edit-date').value = `${yyyy}-${mm}-${dd}`;
   document.getElementById('edit-value').value = row.valueField || '';
-  document.getElementById('edit-waste').value = row.waste || '';
+
+  // Populate waste type dropdown with correct options for the type
+  const wasteSelect = document.getElementById('edit-waste');
+  const hazOptions = [
+    'Used Oil',
+    'Pathological and Infectious Waste',
+    'Lead Compounds',
+    'Oil Contaminated Materials',
+    'Grease Waste',
+    'Waste Electrical and Electronic Equipment',
+    'Mercury and Mercury Compounds',
+    'Containers Previously containing toxic chemical substances'
+  ];
+  const solidOptions = ['Residual', 'Scrap'];
+  const options = isHaz ? hazOptions : solidOptions;
+  wasteSelect.innerHTML = options.map(o =>
+    `<option value="${o}"${o === (row.waste||'') ? ' selected' : ''}>${o}</option>`
+  ).join('');
+
   document.getElementById('entry-edit-modal').style.display='flex';
 }
 
@@ -1639,22 +1667,27 @@ window.onload=async function(){
   if(DEV_MODE){localStorage.setItem("userToken","DEV_TOKEN");document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));document.getElementById('package-section').classList.add('active');showToast('Dev mode','info');return;}
   const token=localStorage.getItem('userToken'),email=localStorage.getItem('userEmail'),role=localStorage.getItem('userRole');
   if(token&&email){
-    // ── Immediately show the app shell so it doesn't look frozen ──
     const prefs=JSON.parse(localStorage.getItem('userPrefs')||'{}');
     applyTheme(prefs.theme||'default');
-    displayUserInfo(email.split('@')[0],role||'user');
-    if(role==='admin'||role==='super_admin') enableAdminUI();
-    // Show a "Resuming session…" overlay on the login section
+    // ── Keep user-info and sidebar HIDDEN until validation completes ──
+    const ui=document.getElementById('user-info'); if(ui) ui.style.display='none';
+    const sidebar=document.getElementById('desktop-sidebar'); if(sidebar) sidebar.style.display='none';
+    const tabBar=document.getElementById('mobile-tab-bar'); if(tabBar) tabBar.style.display='none';
+    document.body.classList.remove('is-admin');
+    // Show "Resuming session…" on the login screen while we validate
     document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
     const loginSec=document.getElementById('login-section');
     if(loginSec) loginSec.classList.add('active');
     const bDiv=document.getElementById('buttonDiv'), lUI=document.getElementById('loginLoadingUI');
     if(bDiv) bDiv.style.display='none';
     if(lUI){ lUI.style.display='flex'; lUI.querySelector('p').textContent='Resuming session…'; }
-    // Now do the async validation in the background
+    // Validate token in background
     const valid=await validateSession();
     if(valid){
+      // Only NOW reveal user info and sidebar
       if(prefs.defaultPackage) selectedPackage=prefs.defaultPackage;
+      displayUserInfo(email.split('@')[0],role||'user');
+      if(role==='admin'||role==='super_admin') enableAdminUI();
       if(role==='admin'||role==='super_admin') initNotifications();
       startSessionMonitoring();
       showSidebarForLoggedInUser();
@@ -1662,12 +1695,10 @@ window.onload=async function(){
       showToast(`Welcome back! ${Math.floor(getTimeUntilExpiry()/60)}h left`,'success');
       return;
     }
-    // Session invalid — reset the login UI
+    // Session invalid — reset to clean login UI
     if(bDiv) bDiv.style.display='flex';
     if(lUI) lUI.style.display='none';
-    document.body.classList.remove('is-admin');
     hideSidebarForLoggedOutUser();
-    const ui=document.getElementById('user-info'); if(ui) ui.style.display='none';
     return;
   }
   if(window.google?.accounts?.id){
@@ -1690,20 +1721,33 @@ function isDesktop() { return window.innerWidth >= DESKTOP_BP; }
 function initDesktopLayout() {
   const sidebar = document.getElementById('desktop-sidebar');
   if (!sidebar) return;
-  if (isDesktop()) {
+  // Only show sidebar shell on desktop IF the user is already logged in
+  // (pre-login class on body hides it via CSS when not yet authenticated)
+  if (isDesktop() && !document.body.classList.contains('pre-login')) {
     sidebar.style.display = 'flex';
     sidebar.style.flexDirection = 'column';
-  } else {
+  } else if (!isDesktop()) {
     sidebar.style.display = 'none';
   }
 }
 
 /* ── Reveal nav + footer after login ── */
 function showSidebarForLoggedInUser() {
-  const nav    = document.getElementById('sb-nav');
-  const footer = document.getElementById('sb-footer');
+  const nav     = document.getElementById('sb-nav');
+  const footer  = document.getElementById('sb-footer');
+  const sidebar = document.getElementById('desktop-sidebar');
   if (nav)    nav.style.display    = 'flex';
   if (footer) footer.style.display = 'flex';
+  // Remove pre-login class → sidebar becomes visible on desktop
+  document.body.classList.remove('pre-login');
+  // Show sidebar shell on desktop instantly (no animation)
+  if (sidebar && isDesktop()) {
+    sidebar.style.display = 'flex';
+    sidebar.style.flexDirection = 'column';
+  }
+  // Show mobile tab bar when logged in
+  const tabBar = document.getElementById('mobile-tab-bar');
+  if (tabBar && !isDesktop()) tabBar.style.display = 'flex';
 }
 
 /* ── Hide nav + footer on logout ── */
@@ -1712,6 +1756,11 @@ function hideSidebarForLoggedOutUser() {
   const footer = document.getElementById('sb-footer');
   if (nav)    nav.style.display    = 'none';
   if (footer) footer.style.display = 'none';
+  // Re-add pre-login class → sidebar hidden again on desktop
+  document.body.classList.add('pre-login');
+  // Hide mobile tab bar
+  const tabBar = document.getElementById('mobile-tab-bar');
+  if (tabBar) tabBar.style.display = 'none';
 }
 
 /* ── Intercept showSection to update active state ── */
@@ -1812,10 +1861,17 @@ function sidebarNav(type, action) {
 const _origUpdatePendingBadge = updatePendingBadge;
 window.updatePendingBadge = function(count) {
   _origUpdatePendingBadge(count);
+  // Sidebar badge
   const sbBadge = document.getElementById('sb-pending-badge');
   if (sbBadge) {
     sbBadge.textContent = count > 99 ? '99+' : count;
     sbBadge.classList.toggle('visible', count > 0);
+  }
+  // #7: Mobile tab bar badge on settings/admin tab
+  const tabBadge = document.querySelector('#tab-settings .tab-badge');
+  if (tabBadge) {
+    tabBadge.textContent = count > 99 ? '99+' : count;
+    tabBadge.classList.toggle('visible', count > 0);
   }
 };
 
@@ -1845,9 +1901,159 @@ window.addEventListener('resize', () => {
   initDesktopLayout();
   const active = document.querySelector('.section.active');
   if (active) updateSidebarActiveState(active.id);
+  // Show/hide tab bar based on viewport
+  const tabBar = document.getElementById('mobile-tab-bar');
+  const isLoggedIn = !!localStorage.getItem('userToken');
+  if (tabBar) tabBar.style.display = (!isDesktop() && isLoggedIn) ? 'flex' : 'none';
 });
 
 /* ── On DOMContentLoaded ── */
 document.addEventListener('DOMContentLoaded', () => {
   initDesktopLayout();
 });
+
+/* ═══════════════════════════════════════════════════════
+   #8 — MOBILE TAB BAR NAVIGATION
+═══════════════════════════════════════════════════════ */
+function mobileTabNav(tab) {
+  // Update active tab state
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  const activeBtn = document.getElementById(`tab-${tab}`);
+  if (activeBtn) activeBtn.classList.add('active');
+
+  switch (tab) {
+    case 'home':
+      if (selectedPackage) {
+        _origShowSection('waste-type-section');
+        updateSidebarActiveState('waste-type-section');
+      } else {
+        _origShowSection('package-section');
+        updateSidebarActiveState('package-section');
+      }
+      break;
+    case 'log':
+      if (!selectedPackage) { showToast('Select a package first', 'error'); mobileTabNav('home'); return; }
+      if (selectedWasteType) {
+        showLogForm(selectedWasteType);
+      } else {
+        _origShowSection('waste-type-section');
+      }
+      break;
+    case 'records':
+      if (!selectedPackage) { showToast('Select a package first', 'error'); mobileTabNav('home'); return; }
+      if (selectedWasteType) {
+        showHistoryView(selectedWasteType);
+      } else {
+        _origShowSection('waste-type-section');
+      }
+      break;
+    case 'settings':
+      showUserSettings();
+      break;
+  }
+}
+
+/* ── Keep tab bar active state in sync with showSection ── */
+function updateMobileTabActiveState(sectionId) {
+  const map = {
+    'package-section':          'home',
+    'waste-type-section':       'home',
+    'hazardous-menu-section':   'home',
+    'solid-menu-section':       'home',
+    'hazardous-form-section':   'log',
+    'solid-form-section':       'log',
+    'hazardous-history-section':'records',
+    'solid-history-section':    'records',
+    'user-settings-section':    'settings',
+    'admin-dashboard':          'settings',
+    'user-management-section':  'settings',
+    'analytics-section':        'settings',
+    'request-logs-section':     'settings',
+  };
+  const tabKey = map[sectionId];
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  if (tabKey) {
+    const btn = document.getElementById(`tab-${tabKey}`);
+    if (btn) btn.classList.add('active');
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   #4 — SIDEBAR PACKAGE PILL BADGE
+═══════════════════════════════════════════════════════ */
+function updateSidebarPackagePill(pkg, wasteType) {
+  // Remove all existing pills
+  document.querySelectorAll('.nav-pkg-pill').forEach(p => p.remove());
+  if (!pkg) return;
+
+  const wasteLabel = wasteType === 'hazardous' ? '☢ Haz' : wasteType === 'solid' ? '🗑 Solid' : null;
+  if (!wasteLabel) return;
+
+  const pkgBtn = document.getElementById(`sb-pkg-${pkg.toLowerCase()}`);
+  if (pkgBtn) {
+    const pill = document.createElement('span');
+    pill.className = 'nav-pkg-pill visible';
+    pill.textContent = wasteLabel;
+    pkgBtn.appendChild(pill);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   #10 — FORM AUTO-FILL LAST USED VALUES
+═══════════════════════════════════════════════════════ */
+const AUTOFILL_KEY = 'wms_last_form_values';
+
+function saveLastFormValues(type, values) {
+  try {
+    const stored = JSON.parse(localStorage.getItem(AUTOFILL_KEY) || '{}');
+    stored[type] = { ...stored[type], ...values, savedAt: Date.now() };
+    localStorage.setItem(AUTOFILL_KEY, JSON.stringify(stored));
+  } catch(e) {}
+}
+
+function loadLastFormValues(type) {
+  try {
+    const stored = JSON.parse(localStorage.getItem(AUTOFILL_KEY) || '{}');
+    return stored[type] || null;
+  } catch(e) { return null; }
+}
+
+function applyFormAutofill(type) {
+  const last = loadLastFormValues(type);
+  if (!last) return;
+  // Only apply if saved within the last 7 days
+  if (Date.now() - (last.savedAt || 0) > 7 * 24 * 60 * 60 * 1000) return;
+
+  if (type === 'hazardous') {
+    const wasteEl = document.getElementById('hazardous-waste');
+    if (wasteEl && last.waste && !wasteEl.value) wasteEl.value = last.waste;
+    // Always pre-fill today's date if blank
+    const dateEl = document.getElementById('hazardous-date');
+    if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().split('T')[0];
+  } else if (type === 'solid') {
+    const wasteEl = document.getElementById('solid-waste');
+    if (wasteEl && last.waste && !wasteEl.value) wasteEl.value = last.waste;
+    const locEl = document.getElementById('solid-location');
+    if (locEl && last.location && !locEl.value) locEl.value = last.location;
+    const dateEl = document.getElementById('solid-date');
+    if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().split('T')[0];
+  }
+}
+
+/* ── Patch showSection to drive tab bar + pill badge + autofill ── */
+const __patched_ss2 = window.showSection;
+window.showSection = function(id) {
+  __patched_ss2(id);
+  updateMobileTabActiveState(id);
+  // Apply autofill when form sections open
+  if (id === 'hazardous-form-section') applyFormAutofill('hazardous');
+  if (id === 'solid-form-section')     applyFormAutofill('solid');
+  // Update pill badge when waste sections are entered
+  if (id === 'hazardous-form-section' || id === 'hazardous-history-section' || id === 'hazardous-menu-section') {
+    updateSidebarPackagePill(selectedPackage, 'hazardous');
+  } else if (id === 'solid-form-section' || id === 'solid-history-section' || id === 'solid-menu-section') {
+    updateSidebarPackagePill(selectedPackage, 'solid');
+  } else if (id === 'package-section' || id === 'waste-type-section') {
+    updateSidebarPackagePill(null, null);
+  }
+};

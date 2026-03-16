@@ -10,7 +10,7 @@
   <link href="style.css" rel="stylesheet" type="text/css">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
-<body>
+<body class="pre-login">
 <div class="app-container">
 
   <!-- ═══ DESKTOP SIDEBAR ═══ -->
@@ -111,8 +111,13 @@
     <!-- ═══ LOGIN ═══ -->
     <div id="login-section" class="section active">
       <div class="section-card-wrap">
-        <h2 class="section-title">Welcome</h2>
-        <p class="section-sub">Sign in with your authorized Google account to continue</p>
+        <div class="login-logo-wrap">
+          <img src="logo.png" alt="HDJV Logo" onerror="this.style.display='none'">
+          <h2 class="section-title" style="margin-bottom:4px;">Welcome Back</h2>
+          <div class="login-org">HDJV Environmental Management</div>
+        </div>
+        <p class="section-sub" style="margin-bottom:0;">Sign in with your authorized Google account to continue</p>
+        <div class="login-divider"><span>Authorized personnel only</span></div>
         <div id="loginWrapper">
           <div id="buttonDiv" style="display:flex;justify-content:center;"></div>
           <div id="loginLoadingUI" class="login-loading-ui">
@@ -120,12 +125,19 @@
             <p>Signing you in…</p>
           </div>
         </div>
+        <div class="login-security-note">Secured with Google OAuth 2.0</div>
       </div>
     </div>
 
     <!-- ═══ PACKAGE ═══ -->
     <div id="package-section" class="section">
-      <div class="section-card-wrap">
+      <div class="section-card-wrap has-page-header">
+        <div class="section-page-header">
+          <div class="section-page-header-text">
+            <div class="section-page-header-title">Select Package</div>
+            <div class="section-page-header-sub">Choose the package you want to work with</div>
+          </div>
+        </div>
         <h2 class="section-title">Select Package</h2>
         <p class="section-sub">Choose the package you want to work with</p>
         <div class="package-grid">
@@ -182,8 +194,14 @@
 
     <!-- ═══ HAZARDOUS FORM ═══ -->
     <div id="hazardous-form-section" class="section">
-      <div class="section-card-wrap">
+      <div class="section-card-wrap has-page-header">
         <button class="back-btn" onclick="backToHazardousMenu()">← Back</button>
+        <div class="section-page-header">
+          <div class="section-page-header-text">
+            <div class="section-page-header-title">New Hazardous Entry</div>
+            <div class="section-page-header-sub" id="hazardous-form-package-header">Log a new hazardous waste disposal</div>
+          </div>
+        </div>
         <div class="breadcrumb"><span class="breadcrumb-item" onclick="backToPackage()">Packages</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToWasteType()" id="hazardous-form-package"></span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToHazardousMenu()">Hazardous</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item active">New Entry</span></div>
         <h2 class="section-title">New Hazardous Entry</h2>
         <div class="form-two-col">
@@ -219,8 +237,14 @@
 
     <!-- ═══ SOLID FORM ═══ -->
     <div id="solid-form-section" class="section">
-      <div class="section-card-wrap">
+      <div class="section-card-wrap has-page-header">
         <button class="back-btn" onclick="backToSolidMenu()">← Back</button>
+        <div class="section-page-header">
+          <div class="section-page-header-text">
+            <div class="section-page-header-title">New Solid Entry</div>
+            <div class="section-page-header-sub" id="solid-form-package-header">Log a new solid waste disposal</div>
+          </div>
+        </div>
         <div class="breadcrumb"><span class="breadcrumb-item" onclick="backToPackage()">Packages</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToWasteType()" id="solid-form-package"></span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToSolidMenu()">Solid</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item active">New Entry</span></div>
         <h2 class="section-title">New Solid Entry</h2>
         <div class="form-two-col">
@@ -246,34 +270,54 @@
 
     <!-- ═══ HAZARDOUS HISTORY ═══ -->
     <div id="hazardous-history-section" class="section">
-      <div class="section-card-wrap" style="max-width:100%;">
+      <div class="section-card-wrap has-page-header" style="max-width:100%;">
         <button class="back-btn" onclick="backToHazardousMenu()">← Back</button>
-        <div class="breadcrumb"><span class="breadcrumb-item" onclick="backToPackage()">Packages</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToWasteType()" id="hazardous-history-package"></span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToHazardousMenu()">Hazardous</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item active">Records</span></div>
-        <h2 class="section-title">Hazardous Records</h2>
-        <div class="filter-bar">
-          <div class="filter-col"><label>From</label><input type="date" id="hazardous-fromDate"></div>
-          <div class="filter-col"><label>To</label><input type="date" id="hazardous-toDate"></div>
-          <div class="filter-col filter-col-full">
-            <label>Waste Type Filter</label>
-            <select id="hazardous-filter-waste">
-              <option value="">All Types</option>
-              <option value="Used Oil">Used Oil</option>
-              <option value="Pathological">Pathological</option>
-              <option value="Lead Compounds">Lead Compounds</option>
-              <option value="Oil Contaminated">Oil Contaminated</option>
-              <option value="Grease Waste">Grease Waste</option>
-              <option value="Waste Electrical">WEEE</option>
-              <option value="Mercury">Mercury</option>
-              <option value="Containers">Containers</option>
-            </select>
+        <div class="section-page-header">
+          <div class="section-page-header-text">
+            <div class="section-page-header-title">Hazardous Records</div>
+            <div class="section-page-header-sub" id="hazardous-history-pkg-label">Filter and export waste entries</div>
+          </div>
+          <div class="section-page-header-actions">
+            <button id="hazardous-exportBtn-hdr" class="btn btn-secondary" onclick="exportExcel('hazardous')" disabled style="height:36px;font-size:0.82rem;">Export Excel</button>
+            <button id="hazardous-pdfBtn-hdr" class="btn btn-secondary" onclick="generatePDFReport('hazardous')" disabled style="height:36px;font-size:0.82rem;">📄 PDF</button>
           </div>
         </div>
-        <div class="history-actions">
-          <button class="btn btn-primary" onclick="loadHistory('hazardous')">Load Entries</button>
-          <button id="hazardous-exportBtn" class="btn btn-secondary" onclick="exportExcel('hazardous')" disabled>Export Excel</button>
-          <button id="hazardous-pdfBtn" class="btn btn-secondary" onclick="generatePDFReport('hazardous')" disabled>📄 PDF Report</button>
+        <div class="breadcrumb"><span class="breadcrumb-item" onclick="backToPackage()">Packages</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToWasteType()" id="hazardous-history-package"></span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToHazardousMenu()">Hazardous</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item active">Records</span></div>
+        <h2 class="section-title">Hazardous Records</h2>
+        <div class="sticky-filter-wrap">
+          <div class="filter-bar">
+            <div class="filter-col"><label>From</label><input type="date" id="hazardous-fromDate"></div>
+            <div class="filter-col"><label>To</label><input type="date" id="hazardous-toDate"></div>
+            <div class="filter-col filter-col-full">
+              <label>Waste Type Filter</label>
+              <select id="hazardous-filter-waste">
+                <option value="">All Types</option>
+                <option value="Used Oil">Used Oil</option>
+                <option value="Pathological">Pathological</option>
+                <option value="Lead Compounds">Lead Compounds</option>
+                <option value="Oil Contaminated">Oil Contaminated</option>
+                <option value="Grease Waste">Grease Waste</option>
+                <option value="Waste Electrical">WEEE</option>
+                <option value="Mercury">Mercury</option>
+                <option value="Containers">Containers</option>
+              </select>
+            </div>
+          </div>
+          <div class="history-actions">
+            <button class="btn btn-primary" onclick="loadHistory('hazardous')">Load Entries</button>
+            <button id="hazardous-exportBtn" class="btn btn-secondary" onclick="exportExcel('hazardous')" disabled>Export Excel</button>
+            <button id="hazardous-pdfBtn" class="btn btn-secondary" onclick="generatePDFReport('hazardous')" disabled>📄 PDF Report</button>
+          </div>
         </div>
-        <div id="hazardous-loading" style="display:none;"><div class="spinner"></div><p style="text-align:center;color:#666;">Loading…</p></div>
+        <div id="hazardous-loading" style="display:none;">
+          <div class="skeleton-wrap" id="hazardous-skeleton">
+            <div class="skeleton-row"><div class="skeleton-cell short"></div><div class="skeleton-cell short"></div><div class="skeleton-cell medium"></div><div class="skeleton-cell full"></div><div class="skeleton-cell short"></div><div class="skeleton-cell short"></div></div>
+            <div class="skeleton-row"><div class="skeleton-cell medium"></div><div class="skeleton-cell short"></div><div class="skeleton-cell full"></div><div class="skeleton-cell medium"></div><div class="skeleton-cell short"></div><div class="skeleton-cell short"></div></div>
+            <div class="skeleton-row"><div class="skeleton-cell short"></div><div class="skeleton-cell short"></div><div class="skeleton-cell short"></div><div class="skeleton-cell full"></div><div class="skeleton-cell short"></div><div class="skeleton-cell short"></div></div>
+            <div class="skeleton-row"><div class="skeleton-cell full"></div><div class="skeleton-cell short"></div><div class="skeleton-cell medium"></div><div class="skeleton-cell short"></div><div class="skeleton-cell short"></div><div class="skeleton-cell short"></div></div>
+            <div class="skeleton-row"><div class="skeleton-cell medium"></div><div class="skeleton-cell short"></div><div class="skeleton-cell full"></div><div class="skeleton-cell medium"></div><div class="skeleton-cell short"></div><div class="skeleton-cell short"></div></div>
+          </div>
+        </div>
         <div class="table-wrapper" id="hazardous-table-container" style="display:none;">
           <table><thead><tr><th>Date</th><th>kg</th><th>Waste</th><th>User</th><th>Photo</th><th>Actions</th></tr></thead><tbody id="hazardous-table-body"></tbody></table>
         </div>
@@ -283,24 +327,44 @@
 
     <!-- ═══ SOLID HISTORY ═══ -->
     <div id="solid-history-section" class="section">
-      <div class="section-card-wrap" style="max-width:100%;">
+      <div class="section-card-wrap has-page-header" style="max-width:100%;">
         <button class="back-btn" onclick="backToSolidMenu()">← Back</button>
-        <div class="breadcrumb"><span class="breadcrumb-item" onclick="backToPackage()">Packages</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToWasteType()" id="solid-history-package"></span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToSolidMenu()">Solid</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item active">Records</span></div>
-        <h2 class="section-title">Solid Records</h2>
-        <div class="filter-bar">
-          <div class="filter-col"><label>From</label><input type="date" id="solid-fromDate"></div>
-          <div class="filter-col"><label>To</label><input type="date" id="solid-toDate"></div>
-          <div class="filter-col filter-col-full">
-            <label>Waste Type Filter</label>
-            <select id="solid-filter-waste"><option value="">All Types</option><option value="Residual">Residual</option><option value="Scrap">Scrap</option></select>
+        <div class="section-page-header">
+          <div class="section-page-header-text">
+            <div class="section-page-header-title">Solid Records</div>
+            <div class="section-page-header-sub" id="solid-history-pkg-label">Filter and export solid waste entries</div>
+          </div>
+          <div class="section-page-header-actions">
+            <button id="solid-exportBtn-hdr" class="btn btn-secondary" onclick="exportExcel('solid')" disabled style="height:36px;font-size:0.82rem;">Export Excel</button>
+            <button id="solid-pdfBtn-hdr" class="btn btn-secondary" onclick="generatePDFReport('solid')" disabled style="height:36px;font-size:0.82rem;">📄 PDF</button>
           </div>
         </div>
-        <div class="history-actions">
-          <button class="btn btn-primary" onclick="loadHistory('solid')">Load Entries</button>
-          <button id="solid-exportBtn" class="btn btn-secondary" onclick="exportExcel('solid')" disabled>Export Excel</button>
-          <button id="solid-pdfBtn" class="btn btn-secondary" onclick="generatePDFReport('solid')" disabled>📄 PDF Report</button>
+        <div class="breadcrumb"><span class="breadcrumb-item" onclick="backToPackage()">Packages</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToWasteType()" id="solid-history-package"></span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToSolidMenu()">Solid</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item active">Records</span></div>
+        <h2 class="section-title">Solid Records</h2>
+        <div class="sticky-filter-wrap">
+          <div class="filter-bar">
+            <div class="filter-col"><label>From</label><input type="date" id="solid-fromDate"></div>
+            <div class="filter-col"><label>To</label><input type="date" id="solid-toDate"></div>
+            <div class="filter-col filter-col-full">
+              <label>Waste Type Filter</label>
+              <select id="solid-filter-waste"><option value="">All Types</option><option value="Residual">Residual</option><option value="Scrap">Scrap</option></select>
+            </div>
+          </div>
+          <div class="history-actions">
+            <button class="btn btn-primary" onclick="loadHistory('solid')">Load Entries</button>
+            <button id="solid-exportBtn" class="btn btn-secondary" onclick="exportExcel('solid')" disabled>Export Excel</button>
+            <button id="solid-pdfBtn" class="btn btn-secondary" onclick="generatePDFReport('solid')" disabled>📄 PDF Report</button>
+          </div>
         </div>
-        <div id="solid-loading" style="display:none;"><div class="spinner"></div><p style="text-align:center;color:#666;">Loading…</p></div>
+        <div id="solid-loading" style="display:none;">
+          <div class="skeleton-wrap" id="solid-skeleton">
+            <div class="skeleton-row"><div class="skeleton-cell short"></div><div class="skeleton-cell medium"></div><div class="skeleton-cell full"></div><div class="skeleton-cell medium"></div><div class="skeleton-cell short"></div><div class="skeleton-cell short"></div></div>
+            <div class="skeleton-row"><div class="skeleton-cell medium"></div><div class="skeleton-cell short"></div><div class="skeleton-cell medium"></div><div class="skeleton-cell full"></div><div class="skeleton-cell short"></div><div class="skeleton-cell short"></div></div>
+            <div class="skeleton-row"><div class="skeleton-cell full"></div><div class="skeleton-cell short"></div><div class="skeleton-cell short"></div><div class="skeleton-cell medium"></div><div class="skeleton-cell short"></div><div class="skeleton-cell short"></div></div>
+            <div class="skeleton-row"><div class="skeleton-cell short"></div><div class="skeleton-cell medium"></div><div class="skeleton-cell full"></div><div class="skeleton-cell short"></div><div class="skeleton-cell short"></div><div class="skeleton-cell short"></div></div>
+            <div class="skeleton-row"><div class="skeleton-cell medium"></div><div class="skeleton-cell short"></div><div class="skeleton-cell medium"></div><div class="skeleton-cell full"></div><div class="skeleton-cell short"></div><div class="skeleton-cell short"></div></div>
+          </div>
+        </div>
         <div class="table-wrapper" id="solid-table-container" style="display:none;">
           <table><thead><tr><th>Date</th><th>Location</th><th>Waste</th><th>User</th><th>Photo</th><th>Actions</th></tr></thead><tbody id="solid-table-body"></tbody></table>
         </div>
@@ -372,6 +436,12 @@
 
     <!-- ═══ ADMIN DASHBOARD ═══ -->
     <div id="admin-dashboard" class="section admin-only">
+      <div class="section-page-header" style="display:none;" id="admin-dash-page-header">
+        <div class="section-page-header-text">
+          <div class="section-page-header-title">Admin Dashboard</div>
+          <div class="section-page-header-sub">Manage users and monitor system activity</div>
+        </div>
+      </div>
       <div class="admin-dash-header">
         <h2>🛡️ Admin Dashboard</h2>
         <p>Manage users and monitor system activity</p>
@@ -390,8 +460,14 @@
     </div>
 
     <!-- ═══ ANALYTICS ═══ -->
-    <div id="analytics-section" class="section admin-only">
+    <div id="analytics-section" class="section admin-only has-page-header">
       <button class="back-btn" onclick="backToAdminDashboard()">← Admin Dashboard</button>
+      <div class="section-page-header">
+        <div class="section-page-header-text">
+          <div class="section-page-header-title">Waste Analytics</div>
+          <div class="section-page-header-sub">Visualize trends and export reports</div>
+        </div>
+      </div>
       <div class="breadcrumb"><span class="breadcrumb-item" onclick="backToAdminDashboard()">Admin</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item active">Analytics</span></div>
       <h2 class="section-title">📊 Waste Analytics</h2>
 
@@ -440,13 +516,22 @@
     </div>
 
     <!-- ═══ USER MANAGEMENT ═══ -->
-    <div id="user-management-section" class="section admin-only">
+    <div id="user-management-section" class="section admin-only has-page-header">
       <button class="back-btn" onclick="backToAdminDashboard()">← Admin Dashboard</button>
+      <div class="section-page-header">
+        <div class="section-page-header-text">
+          <div class="section-page-header-title">User Management</div>
+          <div class="section-page-header-sub">Approve, reject and manage user roles</div>
+        </div>
+        <div class="section-page-header-actions">
+          <button class="btn btn-sm" onclick="loadUsers()">↻ Refresh</button>
+        </div>
+      </div>
       <div class="breadcrumb"><span class="breadcrumb-item" onclick="backToAdminDashboard()">Admin</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item active">Users</span></div>
       <div class="admin-card">
         <div class="admin-header"><h2>👥 User Management</h2><p>Manage user access and roles</p></div>
         <div class="admin-block">
-          <div class="admin-block-header"><h3>All Users</h3><button class="btn btn-sm" onclick="loadUsers()">↻ Refresh</button></div>
+          <div class="admin-block-header"><h3>All Users</h3></div>
           <div class="user-filter-bar">
             <div class="user-filter-search">
               <span class="filter-icon">🔍</span>
@@ -477,13 +562,22 @@
     </div>
 
     <!-- ═══ REQUEST LOGS ═══ -->
-    <div id="request-logs-section" class="section admin-only">
+    <div id="request-logs-section" class="section admin-only has-page-header">
       <button class="back-btn" onclick="backToAdminDashboard()">← Admin Dashboard</button>
+      <div class="section-page-header">
+        <div class="section-page-header-text">
+          <div class="section-page-header-title">Request Logs</div>
+          <div class="section-page-header-sub">System activity and idempotency history</div>
+        </div>
+        <div class="section-page-header-actions">
+          <button class="btn btn-sm" onclick="loadRequests()">↻ Refresh</button>
+        </div>
+      </div>
       <div class="breadcrumb"><span class="breadcrumb-item" onclick="backToAdminDashboard()">Admin</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item active">Logs</span></div>
       <div class="admin-card">
         <div class="admin-header"><h2>📝 Request Logs</h2><p>System activity history</p></div>
         <div class="admin-block">
-          <div class="admin-block-header"><h3>Recent Requests</h3><button class="btn btn-sm" onclick="loadRequests()">Refresh</button></div>
+          <div class="admin-block-header"><h3>Recent Requests</h3></div>
           <table class="admin-table request-log-table"><thead><tr><th>Request ID</th><th>Time</th></tr></thead><tbody id="requestsTableBody"></tbody></table>
         </div>
       </div>
@@ -492,6 +586,28 @@
   </div><!-- /content -->
 
   <div class="footer">Created by <strong>E. Francis Albert</strong></div>
+
+  <!-- ═══ MOBILE BOTTOM TAB BAR ═══ -->
+  <nav class="mobile-tab-bar" id="mobile-tab-bar" style="display:none;">
+    <button class="tab-btn" id="tab-home" onclick="mobileTabNav('home')">
+      <span class="tab-icon">🏠</span>
+      <span class="tab-label">Home</span>
+    </button>
+    <button class="tab-btn" id="tab-log" onclick="mobileTabNav('log')">
+      <span class="tab-icon">✏️</span>
+      <span class="tab-label">Log</span>
+    </button>
+    <button class="tab-btn" id="tab-records" onclick="mobileTabNav('records')">
+      <span class="tab-icon">📋</span>
+      <span class="tab-label">Records</span>
+    </button>
+    <button class="tab-btn" id="tab-settings" onclick="mobileTabNav('settings')">
+      <span class="tab-icon">⚙️</span>
+      <span class="tab-label">Settings</span>
+      <span class="tab-badge" id="tab-pending-badge"></span>
+    </button>
+  </nav>
+
 </div><!-- /app-container -->
 
 <!-- Image modal -->
@@ -502,6 +618,7 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="demo.js"></script>
 <script src="script.js"></script>
 
   <!-- ═══ ENTRY EDIT MODAL ═══ -->
@@ -518,7 +635,8 @@
       </div>
       <div class="form-group">
         <label>Waste Type</label>
-        <input type="text" id="edit-waste" placeholder="Waste type">
+        <select id="edit-waste" style="width:100%;height:46px;padding:0 14px;border:1.5px solid var(--border,#e3e5eb);border-radius:10px;font-size:0.95rem;font-family:inherit;background:var(--bg2,#f4f5f7);color:var(--text,#1a1d23);transition:border-color 0.2s;">
+        </select>
       </div>
       <div style="display:flex;gap:10px;margin-top:16px;">
         <button id="edit-save-btn" class="btn btn-primary" style="flex:1;" onclick="saveEditEntry()">Save Changes</button>
