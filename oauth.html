@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Signing in...</title></head>
+<body>
+<p style="font-family:sans-serif;text-align:center;margin-top:40px;">Completing sign-in...</p>
+<script>
+  // Extract tokens from URL hash
+  const hash = window.location.hash.substring(1);
+  const params = new URLSearchParams(hash);
+  const id_token = params.get('id_token');
+  const state = params.get('state');
+
+  if (id_token) {
+    // Send token back to main app window
+    if (window.opener) {
+      window.opener.postMessage({ type: 'oauth_callback', id_token, state }, '*');
+      window.close();
+    } else {
+      // In Capacitor, redirect back to main app with token in hash
+      window.location.href = 'https://francisalbertespina-spec.github.io/Waste-log-V5/#' + hash;
+    }
+  } else {
+    document.body.innerHTML = '<p style="font-family:sans-serif;text-align:center;margin-top:40px;color:red;">Sign-in failed. Please close this window and try again.</p>';
+  }
+</script>
+</body>
+</html>
