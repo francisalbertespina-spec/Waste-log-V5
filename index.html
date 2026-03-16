@@ -3,18 +3,108 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#d32f2f">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="HDJV WMS">
+  <meta name="description" content="Waste logging and management for HDJV Environmental Management">
   <title>HDJV Waste Management System (WMS)</title>
   <link rel="icon" type="image/png" href="logo.png">
+  <link rel="apple-touch-icon" href="logo.png">
+  <link rel="manifest" href="manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="style.css" rel="stylesheet" type="text/css">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
-<body>
+<body class="pre-login">
+
+<!-- ═══ SPLASH SCREEN ═══ -->
+<div id="wms-splash" class="wms-splash">
+  <div class="wms-splash-inner">
+    <img src="logo.png" alt="HDJV WMS" onerror="this.style.display='none'">
+    <div class="wms-splash-title">WMS</div>
+    <div class="wms-splash-sub">HDJV Environmental Management</div>
+    <div class="wms-splash-spinner"></div>
+  </div>
+</div>
+
+<!-- ═══ OFFLINE BANNER ═══ -->
+<div id="wms-offline-banner" class="wms-offline-banner" style="display:none;">
+  <span>📡 You are offline — some features may be unavailable</span>
+</div>
+
 <div class="app-container">
+
+  <!-- ═══ DESKTOP SIDEBAR ═══ -->
+  <aside class="desktop-sidebar" id="desktop-sidebar" style="display:none;">
+    <div class="sidebar-brand">
+      <img src="logo.png" alt="Logo" onerror="this.style.display='none'">
+      <div class="sidebar-brand-name">WMS</div>
+      <div class="sidebar-brand-sub">HDJV Environmental Management</div>
+    </div>
+
+    <nav class="sidebar-nav" id="sb-nav" style="display:none;">
+      <div class="sidebar-section-label">Packages</div>
+      <button class="sidebar-nav-item" id="sb-pkg-p4" onclick="sidebarSelectPackage('P4')">
+        <span class="nav-icon">📦</span><span class="nav-label">Package 4</span>
+      </button>
+      <button class="sidebar-nav-item" id="sb-pkg-p5" onclick="sidebarSelectPackage('P5')">
+        <span class="nav-icon">📦</span><span class="nav-label">Package 5</span>
+      </button>
+      <button class="sidebar-nav-item" id="sb-pkg-p6" onclick="sidebarSelectPackage('P6')">
+        <span class="nav-icon">📦</span><span class="nav-label">Package 6</span>
+      </button>
+
+      <div class="sidebar-divider" id="sb-waste-divider" style="display:none;"></div>
+      <div class="sidebar-section-label" id="sb-haz-label" style="display:none;">☢️ Hazardous</div>
+      <button class="sidebar-nav-item" id="sb-haz-log" style="display:none;" onclick="sidebarNav('hazardous','log')">
+        <span class="nav-icon">✏️</span><span class="nav-label">Log Entry</span>
+      </button>
+      <button class="sidebar-nav-item" id="sb-haz-records" style="display:none;" onclick="sidebarNav('hazardous','records')">
+        <span class="nav-icon">📋</span><span class="nav-label">View Records</span>
+      </button>
+
+      <div class="sidebar-section-label" id="sb-solid-label" style="display:none;">🗑️ Solid</div>
+      <button class="sidebar-nav-item" id="sb-solid-log" style="display:none;" onclick="sidebarNav('solid','log')">
+        <span class="nav-icon">✏️</span><span class="nav-label">Log Entry</span>
+      </button>
+      <button class="sidebar-nav-item" id="sb-solid-records" style="display:none;" onclick="sidebarNav('solid','records')">
+        <span class="nav-icon">📋</span><span class="nav-label">View Records</span>
+      </button>
+
+      <div class="sidebar-divider admin-only"></div>
+      <div class="sidebar-section-label admin-only">🛡️ Admin</div>
+      <button class="sidebar-nav-item admin-only" id="sb-admin-dash" onclick="showSection('admin-dashboard')">
+        <span class="nav-icon">🏠</span><span class="nav-label">Dashboard</span>
+      </button>
+      <button class="sidebar-nav-item admin-only" id="sb-admin-users" onclick="showUserManagement()">
+        <span class="nav-icon">👥</span><span class="nav-label">Users</span>
+        <span class="nav-badge" id="sb-pending-badge">0</span>
+      </button>
+      <button class="sidebar-nav-item admin-only" id="sb-admin-analytics" onclick="showAnalytics()">
+        <span class="nav-icon">📊</span><span class="nav-label">Analytics</span>
+      </button>
+      <button class="sidebar-nav-item admin-only" id="sb-admin-logs" onclick="showRequestLogs()">
+        <span class="nav-icon">📝</span><span class="nav-label">Request Logs</span>
+      </button>
+    </nav>
+
+    <div class="sidebar-footer" id="sb-footer" style="display:none;">
+      <button class="sidebar-nav-item" id="sb-settings" onclick="showUserSettings()">
+        <span class="nav-icon">⚙️</span><span class="nav-label">Settings</span>
+      </button>
+      <button class="sidebar-nav-item" id="sb-signout" onclick="logout()">
+        <span class="nav-icon">🚪</span><span class="nav-label">Sign Out</span>
+      </button>
+    </div>
+  </aside>
 
   <!-- ═══ HEADER ═══ -->
   <div class="header">
     <img src="logo.png" alt="Logo" class="logo" onerror="this.style.display='none'">
-    <h1>Waste Management System (WMS)</h1>
+    <h1>Waste Management System</h1>
     <p>HDJV Environmental Management</p>
 
     <div id="user-info" class="user-info" style="display:none;">
@@ -23,15 +113,13 @@
           <span id="user-name"></span>
           <span id="user-role-badge" class="role-badge"></span>
         </div>
-        <!-- Notification bell: only visible to admins via CSS -->
         <button id="notif-bell" class="notif-bell admin-only notif-off" onclick="onBellClick()" title="Notifications">
           🔔
           <span id="notif-badge" class="notif-badge" style="display:none;">0</span>
         </button>
       </div>
 
-      <!-- Admin mode toggle -->
-      <div id="mode-toggle" class="mode-toggle admin-only" style="display:none;">
+      <div id="mode-toggle" class="mode-toggle admin-only mobile-only" style="display:none;">
         <span class="mode-label" id="mode-label-user">User</span>
         <label class="toggle-switch">
           <input type="checkbox" id="admin-mode-toggle" onchange="toggleAdminMode()">
@@ -40,238 +128,344 @@
         <span class="mode-label" id="mode-label-admin">Admin</span>
       </div>
     </div>
-  </div><!-- /header -->
+  </div>
 
   <div class="content">
 
     <!-- ═══ LOGIN ═══ -->
     <div id="login-section" class="section active">
-      <h2 class="section-title">Welcome</h2>
-      <p class="section-sub">Sign in with your authorized Google account to continue</p>
-      <div id="loginWrapper">
-        <div id="buttonDiv" style="display:flex;justify-content:center;"></div>
-        <div id="loginLoadingUI" class="login-loading-ui">
-          <div class="login-spinner"></div>
-          <p>Signing you in…</p>
+      <div class="section-card-wrap">
+        <div class="login-logo-wrap">
+          <img src="logo.png" alt="HDJV Logo" onerror="this.style.display='none'">
+          <h2 class="section-title" style="margin-bottom:4px;">Welcome Back</h2>
+          <div class="login-org">HDJV Environmental Management</div>
         </div>
+        <p class="section-sub" style="margin-bottom:0;">Sign in with your authorized Google account to continue</p>
+        <div class="login-divider"><span>Authorized personnel only</span></div>
+        <div id="loginWrapper">
+          <div id="buttonDiv" style="display:flex;justify-content:center;"></div>
+          <div id="loginLoadingUI" class="login-loading-ui">
+            <div class="login-spinner"></div>
+            <p>Signing you in…</p>
+          </div>
+        </div>
+        <div class="login-security-note">Secured with Google OAuth 2.0</div>
       </div>
     </div>
 
     <!-- ═══ PACKAGE ═══ -->
     <div id="package-section" class="section">
-      <h2 class="section-title">Select Package</h2>
-      <p class="section-sub">Choose the package you want to work with</p>
-      <div class="package-grid">
-        <div class="package-card" onclick="selectPackage('P4',this)"><div class="icon">📦</div><div class="name">Package 4</div></div>
-        <div class="package-card" onclick="selectPackage('P5',this)"><div class="icon">📦</div><div class="name">Package 5</div></div>
-        <div class="package-card" onclick="selectPackage('P6',this)"><div class="icon">📦</div><div class="name">Package 6</div></div>
+      <div class="section-card-wrap has-page-header">
+        <div class="section-page-header">
+          <div class="section-page-header-text">
+            <div class="section-page-header-title">Select Package</div>
+            <div class="section-page-header-sub">Choose the package you want to work with</div>
+          </div>
+        </div>
+        <h2 class="section-title">Select Package</h2>
+        <p class="section-sub">Choose the package you want to work with</p>
+        <div class="package-grid">
+          <div class="package-card" onclick="selectPackage('P4',this)"><div class="icon">📦</div><div class="name">Package 4</div></div>
+          <div class="package-card" onclick="selectPackage('P5',this)"><div class="icon">📦</div><div class="name">Package 5</div></div>
+          <div class="package-card" onclick="selectPackage('P6',this)"><div class="icon">📦</div><div class="name">Package 6</div></div>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-primary" onclick="confirmPackage()">Continue →</button>
+          <button class="btn btn-secondary mobile-only" onclick="showUserSettings()">⚙️ My Settings</button>
+          <button class="btn btn-secondary mobile-only" onclick="logout()">Sign Out</button>
+        </div>
       </div>
-      <button class="btn btn-primary" onclick="confirmPackage()">Continue</button>
-      <button class="btn btn-secondary" onclick="showUserSettings()" style="margin-top:10px;">⚙️ My Settings</button>
-      <button class="btn btn-secondary" onclick="logout()" style="margin-top:10px;">Sign Out</button>
     </div>
 
     <!-- ═══ WASTE TYPE ═══ -->
     <div id="waste-type-section" class="section">
-      <button class="back-btn" onclick="backToPackage()">← Back to Packages</button>
-      <div class="breadcrumb"><span class="breadcrumb-item" onclick="backToPackage()">Packages</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item active" id="waste-type-package"></span></div>
-      <h2 class="section-title">Select Waste Type</h2>
-      <div class="menu-grid">
-        <div class="menu-btn" onclick="selectWasteType('hazardous')"><div class="icon">☢️</div><div class="text"><h3>Hazardous Waste</h3><p>Chemical, toxic, and hazardous materials</p></div><div class="arrow">→</div></div>
-        <div class="menu-btn" onclick="selectWasteType('solid')"><div class="icon">🗑️</div><div class="text"><h3>Solid Waste</h3><p>Residual and scrap materials</p></div><div class="arrow">→</div></div>
+      <div class="section-card-wrap">
+        <button class="back-btn" onclick="backToPackage()">← Back to Packages</button>
+        <div class="breadcrumb"><span class="breadcrumb-item" onclick="backToPackage()">Packages</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item active" id="waste-type-package"></span></div>
+        <h2 class="section-title">Select Waste Type</h2>
+        <div class="menu-grid">
+          <div class="menu-btn" onclick="selectWasteType('hazardous')"><div class="icon">☢️</div><div class="text"><h3>Hazardous Waste</h3><p>Chemical, toxic, and hazardous materials</p></div><div class="arrow">→</div></div>
+          <div class="menu-btn" onclick="selectWasteType('solid')"><div class="icon">🗑️</div><div class="text"><h3>Solid Waste</h3><p>Residual and scrap materials</p></div><div class="arrow">→</div></div>
+        </div>
       </div>
     </div>
 
     <!-- ═══ HAZARDOUS MENU ═══ -->
     <div id="hazardous-menu-section" class="section">
-      <button class="back-btn" onclick="backToWasteType()">← Back</button>
-      <div class="breadcrumb"><span class="breadcrumb-item" onclick="backToPackage()">Packages</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToWasteType()" id="hazardous-menu-package"></span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item active">Hazardous</span></div>
-      <h2 class="section-title">Hazardous Waste</h2>
-      <div class="menu-grid">
-        <div class="menu-btn" onclick="showLogForm('hazardous')"><div class="icon">✏️</div><div class="text"><h3>Log New Entry</h3><p>Record new waste disposal</p></div><div class="arrow">→</div></div>
-        <div class="menu-btn" onclick="showHistoryView('hazardous')"><div class="icon">📊</div><div class="text"><h3>View Records</h3><p>Browse & export entries</p></div><div class="arrow">→</div></div>
+      <div class="section-card-wrap">
+        <button class="back-btn" onclick="backToWasteType()">← Back</button>
+        <div class="breadcrumb"><span class="breadcrumb-item" onclick="backToPackage()">Packages</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToWasteType()" id="hazardous-menu-package"></span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item active">Hazardous</span></div>
+        <h2 class="section-title">Hazardous Waste</h2>
+        <div class="menu-grid">
+          <div class="menu-btn" onclick="showLogForm('hazardous')"><div class="icon">✏️</div><div class="text"><h3>Log New Entry</h3><p>Record new waste disposal</p></div><div class="arrow">→</div></div>
+          <div class="menu-btn" onclick="showHistoryView('hazardous')"><div class="icon">📊</div><div class="text"><h3>View Records</h3><p>Browse &amp; export entries</p></div><div class="arrow">→</div></div>
+        </div>
       </div>
     </div>
 
     <!-- ═══ SOLID MENU ═══ -->
     <div id="solid-menu-section" class="section">
-      <button class="back-btn" onclick="backToWasteType()">← Back</button>
-      <div class="breadcrumb"><span class="breadcrumb-item" onclick="backToPackage()">Packages</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToWasteType()" id="solid-menu-package"></span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item active">Solid</span></div>
-      <h2 class="section-title">Solid Waste</h2>
-      <div class="menu-grid">
-        <div class="menu-btn" onclick="showLogForm('solid')"><div class="icon">✏️</div><div class="text"><h3>Log New Entry</h3><p>Record new waste disposal</p></div><div class="arrow">→</div></div>
-        <div class="menu-btn" onclick="showHistoryView('solid')"><div class="icon">📊</div><div class="text"><h3>View Records</h3><p>Browse & export entries</p></div><div class="arrow">→</div></div>
+      <div class="section-card-wrap">
+        <button class="back-btn" onclick="backToWasteType()">← Back</button>
+        <div class="breadcrumb"><span class="breadcrumb-item" onclick="backToPackage()">Packages</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToWasteType()" id="solid-menu-package"></span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item active">Solid</span></div>
+        <h2 class="section-title">Solid Waste</h2>
+        <div class="menu-grid">
+          <div class="menu-btn" onclick="showLogForm('solid')"><div class="icon">✏️</div><div class="text"><h3>Log New Entry</h3><p>Record new waste disposal</p></div><div class="arrow">→</div></div>
+          <div class="menu-btn" onclick="showHistoryView('solid')"><div class="icon">📊</div><div class="text"><h3>View Records</h3><p>Browse &amp; export entries</p></div><div class="arrow">→</div></div>
+        </div>
       </div>
     </div>
 
     <!-- ═══ HAZARDOUS FORM ═══ -->
     <div id="hazardous-form-section" class="section">
-      <button class="back-btn" onclick="backToHazardousMenu()">← Back</button>
-      <div class="breadcrumb"><span class="breadcrumb-item" onclick="backToPackage()">Packages</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToWasteType()" id="hazardous-form-package"></span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToHazardousMenu()">Hazardous</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item active">New Entry</span></div>
-      <h2 class="section-title">New Hazardous Entry</h2>
-      <div class="form-group" id="hazardous-date-group"><label>Date</label><input type="date" id="hazardous-date"><div class="error-msg">Please select a date</div></div>
-      <div class="form-group" id="hazardous-volume-group"><label>Volume (kg)</label><input type="number" step="0.00001" id="hazardous-volume" placeholder="0.00000"><div class="error-msg">Please enter a volume</div></div>
-      <div class="form-group" id="hazardous-waste-group">
-        <label>Waste Name</label>
-        <select id="hazardous-waste">
-          <option value="">-- Select Waste Type --</option>
-          <option value="Used Oil">Used Oil</option>
-          <option value="Pathological and Infectious Waste">Pathological and Infectious Waste</option>
-          <option value="Lead Compounds">Lead Compounds</option>
-          <option value="Oil Contaminated Materials">Oil Contaminated Materials</option>
-          <option value="Grease Waste">Grease Waste</option>
-          <option value="Waste Electrical and Electronic Equipment">Waste Electrical and Electronic Equipment</option>
-          <option value="Mercury and Mercury Compounds">Mercury and Mercury Compounds</option>
-          <option value="Containers Previously containing toxic chemical substances">Containers Previously containing toxic chemical substances</option>
-        </select>
-        <div class="error-msg">Please select a waste type</div>
-      </div>
-      <div class="form-group" id="hazardous-photo-group">
-        <label>Photo Proof</label>
-        <div class="photo-upload" onclick="document.getElementById('hazardous-photo').click()">
-          <input type="file" id="hazardous-photo" accept="image/*" capture="environment" onchange="previewImage(event,'hazardous')">
-          <div class="placeholder"><div class="icon">📷</div><p><strong>Tap to capture photo</strong></p><p style="font-size:.85rem;color:#999;margin-top:5px;">Required for verification</p></div>
+      <div class="section-card-wrap has-page-header">
+        <button class="back-btn" onclick="backToHazardousMenu()">← Back</button>
+        <div class="section-page-header">
+          <div class="section-page-header-text">
+            <div class="section-page-header-title">New Hazardous Entry</div>
+            <div class="section-page-header-sub" id="hazardous-form-package-header">Log a new hazardous waste disposal</div>
+          </div>
         </div>
-        <div class="error-msg">Please upload a photo</div>
+        <div class="breadcrumb"><span class="breadcrumb-item" onclick="backToPackage()">Packages</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToWasteType()" id="hazardous-form-package"></span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToHazardousMenu()">Hazardous</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item active">New Entry</span></div>
+        <h2 class="section-title">New Hazardous Entry</h2>
+        <div class="form-two-col">
+          <div class="form-group" id="hazardous-date-group"><label>Date</label><input type="date" id="hazardous-date"><div class="error-msg">Please select a date</div></div>
+          <div class="form-group" id="hazardous-volume-group"><label>Volume (kg)</label><input type="number" step="0.00001" id="hazardous-volume" placeholder="0.00000" inputmode="decimal"><div class="error-msg">Please enter a volume</div></div>
+          <div class="form-group" id="hazardous-waste-group">
+            <label>Waste Name</label>
+            <select id="hazardous-waste">
+              <option value="">-- Select Waste Type --</option>
+              <option value="Used Oil">Used Oil</option>
+              <option value="Pathological and Infectious Waste">Pathological and Infectious Waste</option>
+              <option value="Lead Compounds">Lead Compounds</option>
+              <option value="Oil Contaminated Materials">Oil Contaminated Materials</option>
+              <option value="Grease Waste">Grease Waste</option>
+              <option value="Waste Electrical and Electronic Equipment">Waste Electrical and Electronic Equipment</option>
+              <option value="Mercury and Mercury Compounds">Mercury and Mercury Compounds</option>
+              <option value="Containers Previously containing toxic chemical substances">Containers Previously containing toxic chemical substances</option>
+            </select>
+            <div class="error-msg">Please select a waste type</div>
+          </div>
+          <div class="form-group" id="hazardous-photo-group">
+            <label>Photo Proof</label>
+            <div class="photo-upload" onclick="document.getElementById('hazardous-photo').click()">
+              <input type="file" id="hazardous-photo" accept="image/*" capture="environment" onchange="previewImage(event,'hazardous')">
+              <div class="placeholder"><div class="icon">📷</div><p><strong>Tap to capture photo</strong></p><p style="font-size:.85rem;color:#999;margin-top:5px;">Required for verification</p></div>
+            </div>
+            <div class="error-msg">Please upload a photo</div>
+          </div>
+        </div>
+        <div class="btn-group"><button id="hazardous-submitBtn" class="btn btn-primary" onclick="addEntry('hazardous')">Submit Entry</button></div>
       </div>
-      <div class="btn-group"><button id="hazardous-submitBtn" class="btn btn-primary" onclick="addEntry('hazardous')">Submit Entry</button></div>
     </div>
 
     <!-- ═══ SOLID FORM ═══ -->
     <div id="solid-form-section" class="section">
-      <button class="back-btn" onclick="backToSolidMenu()">← Back</button>
-      <div class="breadcrumb"><span class="breadcrumb-item" onclick="backToPackage()">Packages</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToWasteType()" id="solid-form-package"></span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToSolidMenu()">Solid</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item active">New Entry</span></div>
-      <h2 class="section-title">New Solid Entry</h2>
-      <div class="form-group" id="solid-date-group"><label>Date</label><input type="date" id="solid-date"><div class="error-msg">Please select a date</div></div>
-      <div class="form-group" id="solid-location-group">
-        <label>Location (Pier Number)</label>
-        <div style="display:flex;align-items:center;gap:10px;"><span style="font-size:1.1rem;font-weight:600;color:#555;">P-</span><input type="number" id="solid-location" placeholder="462" min="462" max="1260" style="flex:1;"></div>
-        <div class="error-msg">Please enter a pier number (462–1260)</div>
-      </div>
-      <div class="form-group" id="solid-waste-group"><label>Waste Name</label><select id="solid-waste"><option value="">-- Select Waste Type --</option><option value="Residual">Residual</option><option value="Scrap">Scrap</option></select><div class="error-msg">Please select a waste type</div></div>
-      <div class="form-group" id="solid-photo-group">
-        <label>Photo Proof</label>
-        <div class="photo-upload" onclick="document.getElementById('solid-photo').click()">
-          <input type="file" id="solid-photo" accept="image/*" capture="environment" onchange="previewImage(event,'solid')">
-          <div class="placeholder"><div class="icon">📷</div><p><strong>Tap to capture photo</strong></p><p style="font-size:.85rem;color:#999;margin-top:5px;">Required for verification</p></div>
+      <div class="section-card-wrap has-page-header">
+        <button class="back-btn" onclick="backToSolidMenu()">← Back</button>
+        <div class="section-page-header">
+          <div class="section-page-header-text">
+            <div class="section-page-header-title">New Solid Entry</div>
+            <div class="section-page-header-sub" id="solid-form-package-header">Log a new solid waste disposal</div>
+          </div>
         </div>
-        <div class="error-msg">Please upload a photo</div>
+        <div class="breadcrumb"><span class="breadcrumb-item" onclick="backToPackage()">Packages</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToWasteType()" id="solid-form-package"></span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToSolidMenu()">Solid</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item active">New Entry</span></div>
+        <h2 class="section-title">New Solid Entry</h2>
+        <div class="form-two-col">
+          <div class="form-group" id="solid-date-group"><label>Date</label><input type="date" id="solid-date"><div class="error-msg">Please select a date</div></div>
+          <div class="form-group" id="solid-location-group">
+            <label>Location (Pier Number)</label>
+            <div style="display:flex;align-items:center;gap:10px;"><span style="font-size:1.1rem;font-weight:600;color:#555;">P-</span><input type="number" id="solid-location" placeholder="462" min="462" max="1260" inputmode="numeric" style="flex:1;"></div>
+            <div class="error-msg">Please enter a pier number (462–1260)</div>
+          </div>
+          <div class="form-group" id="solid-waste-group"><label>Waste Name</label><select id="solid-waste"><option value="">-- Select Waste Type --</option><option value="Residual">Residual</option><option value="Scrap">Scrap</option></select><div class="error-msg">Please select a waste type</div></div>
+          <div class="form-group" id="solid-photo-group">
+            <label>Photo Proof</label>
+            <div class="photo-upload" onclick="document.getElementById('solid-photo').click()">
+              <input type="file" id="solid-photo" accept="image/*" capture="environment" onchange="previewImage(event,'solid')">
+              <div class="placeholder"><div class="icon">📷</div><p><strong>Tap to capture photo</strong></p><p style="font-size:.85rem;color:#999;margin-top:5px;">Required for verification</p></div>
+            </div>
+            <div class="error-msg">Please upload a photo</div>
+          </div>
+        </div>
+        <div class="btn-group"><button id="solid-submitBtn" class="btn btn-primary" onclick="addEntry('solid')">Submit Entry</button></div>
       </div>
-      <div class="btn-group"><button id="solid-submitBtn" class="btn btn-primary" onclick="addEntry('solid')">Submit Entry</button></div>
     </div>
 
     <!-- ═══ HAZARDOUS HISTORY ═══ -->
     <div id="hazardous-history-section" class="section">
-      <button class="back-btn" onclick="backToHazardousMenu()">← Back</button>
-      <div class="breadcrumb"><span class="breadcrumb-item" onclick="backToPackage()">Packages</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToWasteType()" id="hazardous-history-package"></span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToHazardousMenu()">Hazardous</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item active">Records</span></div>
-      <h2 class="section-title">Hazardous Records</h2>
-
-      <!-- Filters -->
-      <div class="filter-bar">
-        <div class="filter-col"><label>From</label><input type="date" id="hazardous-fromDate"></div>
-        <div class="filter-col"><label>To</label><input type="date" id="hazardous-toDate"></div>
-        <div class="filter-col filter-col-full">
-          <label>Waste Type Filter</label>
-          <select id="hazardous-filter-waste">
-            <option value="">All Types</option>
-            <option value="Used Oil">Used Oil</option>
-            <option value="Pathological">Pathological</option>
-            <option value="Lead Compounds">Lead Compounds</option>
-            <option value="Oil Contaminated">Oil Contaminated</option>
-            <option value="Grease Waste">Grease Waste</option>
-            <option value="Waste Electrical">WEEE</option>
-            <option value="Mercury">Mercury</option>
-            <option value="Containers">Containers</option>
-          </select>
+      <div class="section-card-wrap has-page-header" style="max-width:100%;">
+        <button class="back-btn" onclick="backToHazardousMenu()">← Back</button>
+        <div class="section-page-header">
+          <div class="section-page-header-text">
+            <div class="section-page-header-title">Hazardous Records</div>
+            <div class="section-page-header-sub" id="hazardous-history-pkg-label">Filter and export waste entries</div>
+          </div>
+          <div class="section-page-header-actions">
+            <button id="hazardous-exportBtn-hdr" class="btn btn-secondary" onclick="exportExcel('hazardous')" disabled style="height:36px;font-size:0.82rem;">Export Excel</button>
+            <button id="hazardous-pdfBtn-hdr" class="btn btn-secondary" onclick="generatePDFReport('hazardous')" disabled style="height:36px;font-size:0.82rem;">📄 PDF</button>
+          </div>
         </div>
+        <div class="breadcrumb"><span class="breadcrumb-item" onclick="backToPackage()">Packages</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToWasteType()" id="hazardous-history-package"></span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToHazardousMenu()">Hazardous</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item active">Records</span></div>
+        <h2 class="section-title">Hazardous Records</h2>
+        <div class="sticky-filter-wrap">
+          <div class="filter-bar">
+            <div class="filter-col"><label>From</label><input type="date" id="hazardous-fromDate"></div>
+            <div class="filter-col"><label>To</label><input type="date" id="hazardous-toDate"></div>
+            <div class="filter-col filter-col-full">
+              <label>Waste Type Filter</label>
+              <select id="hazardous-filter-waste">
+                <option value="">All Types</option>
+                <option value="Used Oil">Used Oil</option>
+                <option value="Pathological">Pathological</option>
+                <option value="Lead Compounds">Lead Compounds</option>
+                <option value="Oil Contaminated">Oil Contaminated</option>
+                <option value="Grease Waste">Grease Waste</option>
+                <option value="Waste Electrical">WEEE</option>
+                <option value="Mercury">Mercury</option>
+                <option value="Containers">Containers</option>
+              </select>
+            </div>
+          </div>
+          <div class="history-actions">
+            <button class="btn btn-primary" onclick="loadHistory('hazardous')">Load Entries</button>
+            <button id="hazardous-exportBtn" class="btn btn-secondary" onclick="exportExcel('hazardous')" disabled>Export Excel</button>
+            <button id="hazardous-pdfBtn" class="btn btn-secondary" onclick="generatePDFReport('hazardous')" disabled>📄 PDF Report</button>
+          </div>
+        </div>
+        <div id="hazardous-loading" style="display:none;">
+          <div class="skeleton-wrap" id="hazardous-skeleton">
+            <div class="skeleton-row"><div class="skeleton-cell short"></div><div class="skeleton-cell short"></div><div class="skeleton-cell medium"></div><div class="skeleton-cell full"></div><div class="skeleton-cell short"></div><div class="skeleton-cell short"></div></div>
+            <div class="skeleton-row"><div class="skeleton-cell medium"></div><div class="skeleton-cell short"></div><div class="skeleton-cell full"></div><div class="skeleton-cell medium"></div><div class="skeleton-cell short"></div><div class="skeleton-cell short"></div></div>
+            <div class="skeleton-row"><div class="skeleton-cell short"></div><div class="skeleton-cell short"></div><div class="skeleton-cell short"></div><div class="skeleton-cell full"></div><div class="skeleton-cell short"></div><div class="skeleton-cell short"></div></div>
+            <div class="skeleton-row"><div class="skeleton-cell full"></div><div class="skeleton-cell short"></div><div class="skeleton-cell medium"></div><div class="skeleton-cell short"></div><div class="skeleton-cell short"></div><div class="skeleton-cell short"></div></div>
+            <div class="skeleton-row"><div class="skeleton-cell medium"></div><div class="skeleton-cell short"></div><div class="skeleton-cell full"></div><div class="skeleton-cell medium"></div><div class="skeleton-cell short"></div><div class="skeleton-cell short"></div></div>
+          </div>
+        </div>
+        <div class="table-wrapper" id="hazardous-table-container" style="display:none;">
+          <table><thead><tr><th>Date</th><th>kg</th><th>Waste</th><th>User</th><th>Photo</th><th>Actions</th></tr></thead><tbody id="hazardous-table-body"></tbody></table>
+        </div>
+        <div id="hazardous-empty-state" class="empty-state"><div class="icon">📋</div><p><strong>No records found</strong></p><p style="font-size:.9rem;margin-top:6px;">Select a date range and click Load</p></div>
       </div>
-      <div class="history-actions">
-        <button class="btn btn-primary" onclick="loadHistory('hazardous')">Load Entries</button>
-        <button id="hazardous-exportBtn" class="btn btn-secondary" onclick="exportExcel('hazardous')" disabled>Export Excel</button>
-        <button id="hazardous-pdfBtn" class="btn btn-secondary" onclick="generatePDFReport('hazardous')" disabled>📄 PDF</button>
-      </div>
-      <div id="hazardous-loading" style="display:none;"><div class="spinner"></div><p style="text-align:center;color:#666;">Loading…</p></div>
-      <div class="table-wrapper" id="hazardous-table-container" style="display:none;">
-        <table><thead><tr><th>Date</th><th>kg</th><th>Waste</th><th>User</th><th>Photo</th><th>Actions</th></tr></thead><tbody id="hazardous-table-body"></tbody></table>
-      </div>
-      <div id="hazardous-empty-state" class="empty-state"><div class="icon">📋</div><p><strong>No records</strong></p><p style="font-size:.9rem;">Select a date range and click Load</p></div>
     </div>
 
     <!-- ═══ SOLID HISTORY ═══ -->
     <div id="solid-history-section" class="section">
-      <button class="back-btn" onclick="backToSolidMenu()">← Back</button>
-      <div class="breadcrumb"><span class="breadcrumb-item" onclick="backToPackage()">Packages</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToWasteType()" id="solid-history-package"></span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToSolidMenu()">Solid</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item active">Records</span></div>
-      <h2 class="section-title">Solid Records</h2>
-
-      <!-- Filters -->
-      <div class="filter-bar">
-        <div class="filter-col"><label>From</label><input type="date" id="solid-fromDate"></div>
-        <div class="filter-col"><label>To</label><input type="date" id="solid-toDate"></div>
-        <div class="filter-col filter-col-full">
-          <label>Waste Type Filter</label>
-          <select id="solid-filter-waste"><option value="">All Types</option><option value="Residual">Residual</option><option value="Scrap">Scrap</option></select>
+      <div class="section-card-wrap has-page-header" style="max-width:100%;">
+        <button class="back-btn" onclick="backToSolidMenu()">← Back</button>
+        <div class="section-page-header">
+          <div class="section-page-header-text">
+            <div class="section-page-header-title">Solid Records</div>
+            <div class="section-page-header-sub" id="solid-history-pkg-label">Filter and export solid waste entries</div>
+          </div>
+          <div class="section-page-header-actions">
+            <button id="solid-exportBtn-hdr" class="btn btn-secondary" onclick="exportExcel('solid')" disabled style="height:36px;font-size:0.82rem;">Export Excel</button>
+            <button id="solid-pdfBtn-hdr" class="btn btn-secondary" onclick="generatePDFReport('solid')" disabled style="height:36px;font-size:0.82rem;">📄 PDF</button>
+          </div>
         </div>
+        <div class="breadcrumb"><span class="breadcrumb-item" onclick="backToPackage()">Packages</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToWasteType()" id="solid-history-package"></span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item" onclick="backToSolidMenu()">Solid</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item active">Records</span></div>
+        <h2 class="section-title">Solid Records</h2>
+        <div class="sticky-filter-wrap">
+          <div class="filter-bar">
+            <div class="filter-col"><label>From</label><input type="date" id="solid-fromDate"></div>
+            <div class="filter-col"><label>To</label><input type="date" id="solid-toDate"></div>
+            <div class="filter-col filter-col-full">
+              <label>Waste Type Filter</label>
+              <select id="solid-filter-waste"><option value="">All Types</option><option value="Residual">Residual</option><option value="Scrap">Scrap</option></select>
+            </div>
+          </div>
+          <div class="history-actions">
+            <button class="btn btn-primary" onclick="loadHistory('solid')">Load Entries</button>
+            <button id="solid-exportBtn" class="btn btn-secondary" onclick="exportExcel('solid')" disabled>Export Excel</button>
+            <button id="solid-pdfBtn" class="btn btn-secondary" onclick="generatePDFReport('solid')" disabled>📄 PDF Report</button>
+          </div>
+        </div>
+        <div id="solid-loading" style="display:none;">
+          <div class="skeleton-wrap" id="solid-skeleton">
+            <div class="skeleton-row"><div class="skeleton-cell short"></div><div class="skeleton-cell medium"></div><div class="skeleton-cell full"></div><div class="skeleton-cell medium"></div><div class="skeleton-cell short"></div><div class="skeleton-cell short"></div></div>
+            <div class="skeleton-row"><div class="skeleton-cell medium"></div><div class="skeleton-cell short"></div><div class="skeleton-cell medium"></div><div class="skeleton-cell full"></div><div class="skeleton-cell short"></div><div class="skeleton-cell short"></div></div>
+            <div class="skeleton-row"><div class="skeleton-cell full"></div><div class="skeleton-cell short"></div><div class="skeleton-cell short"></div><div class="skeleton-cell medium"></div><div class="skeleton-cell short"></div><div class="skeleton-cell short"></div></div>
+            <div class="skeleton-row"><div class="skeleton-cell short"></div><div class="skeleton-cell medium"></div><div class="skeleton-cell full"></div><div class="skeleton-cell short"></div><div class="skeleton-cell short"></div><div class="skeleton-cell short"></div></div>
+            <div class="skeleton-row"><div class="skeleton-cell medium"></div><div class="skeleton-cell short"></div><div class="skeleton-cell medium"></div><div class="skeleton-cell full"></div><div class="skeleton-cell short"></div><div class="skeleton-cell short"></div></div>
+          </div>
+        </div>
+        <div class="table-wrapper" id="solid-table-container" style="display:none;">
+          <table><thead><tr><th>Date</th><th>Location</th><th>Waste</th><th>User</th><th>Photo</th><th>Actions</th></tr></thead><tbody id="solid-table-body"></tbody></table>
+        </div>
+        <div id="solid-empty-state" class="empty-state"><div class="icon">📋</div><p><strong>No records found</strong></p><p style="font-size:.9rem;margin-top:6px;">Select a date range and click Load</p></div>
       </div>
-      <div class="history-actions">
-        <button class="btn btn-primary" onclick="loadHistory('solid')">Load Entries</button>
-        <button id="solid-exportBtn" class="btn btn-secondary" onclick="exportExcel('solid')" disabled>Export Excel</button>
-        <button id="solid-pdfBtn" class="btn btn-secondary" onclick="generatePDFReport('solid')" disabled>📄 PDF</button>
-      </div>
-      <div id="solid-loading" style="display:none;"><div class="spinner"></div><p style="text-align:center;color:#666;">Loading…</p></div>
-      <div class="table-wrapper" id="solid-table-container" style="display:none;">
-        <table><thead><tr><th>Date</th><th>Location</th><th>Waste</th><th>User</th><th>Photo</th><th>Actions</th></tr></thead><tbody id="solid-table-body"></tbody></table>
-      </div>
-      <div id="solid-empty-state" class="empty-state"><div class="icon">📋</div><p><strong>No records</strong></p><p style="font-size:.9rem;">Select a date range and click Load</p></div>
     </div>
 
     <!-- ═══ USER SETTINGS ═══ -->
     <div id="user-settings-section" class="section">
-      <button class="back-btn" onclick="showSection('package-section')">← Back</button>
-      <h2 class="section-title">⚙️ My Settings</h2>
-      <p class="section-sub">Account info and preferences</p>
+      <div class="section-card-wrap settings-wrap">
+        <button class="back-btn" onclick="showSection('package-section')">← Back</button>
+        <h2 class="section-title">⚙️ My Settings</h2>
+        <p class="section-sub">Account info and preferences</p>
 
-      <div class="settings-card">
-        <div class="settings-card-title">👤 Account</div>
-        <div class="settings-row"><span class="settings-label">Email</span><span class="settings-value" id="settings-email">—</span></div>
-        <div class="settings-row"><span class="settings-label">Role</span><span class="settings-value" id="settings-role">—</span></div>
-        <div class="settings-row"><span class="settings-label">Session expires</span><span class="settings-value" id="settings-session">—</span></div>
-        <div class="settings-row"><span class="settings-label">Submissions (24h)</span><span class="settings-value" id="settings-submissions">0</span></div>
-      </div>
+        <div class="settings-grid">
+          <div class="settings-col">
+            <div class="settings-card">
+              <div class="settings-card-title">👤 Account</div>
+              <div class="settings-row"><span class="settings-label">Email</span><span class="settings-value" id="settings-email">—</span></div>
+              <div class="settings-row"><span class="settings-label">Role</span><span class="settings-value" id="settings-role">—</span></div>
+              <div class="settings-row"><span class="settings-label">Session expires</span><span class="settings-value" id="settings-session">—</span></div>
+              <div class="settings-row"><span class="settings-label">Submissions (24h)</span><span class="settings-value" id="settings-submissions">0</span></div>
+            </div>
 
-      <div class="settings-card">
-        <div class="settings-card-title">🔔 Notifications</div>
-        <div class="settings-row">
-          <span class="settings-label">Push status</span>
-          <span class="settings-value" id="settings-notif-status">⚪ Not enabled</span>
+            <div class="settings-card">
+              <div class="settings-card-title">🔔 Notifications</div>
+              <div class="settings-row">
+                <span class="settings-label">Push status</span>
+                <span class="settings-value" id="settings-notif-status">⚪ Not enabled</span>
+              </div>
+              <div class="notif-actions">
+                <button id="settings-notif-btn" class="btn btn-secondary settings-btn" onclick="requestNotificationPermission()">🔔 Enable</button>
+                <button class="btn btn-secondary settings-btn" onclick="sendTestNotification()">🧪 Test</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-col">
+            <div class="settings-card">
+              <div class="settings-card-title">🎛️ Preferences</div>
+              <div class="settings-row settings-row-stacked"><span class="settings-label">Default Package</span>
+                <select id="pref-default-package" class="settings-select"><option value="">None</option><option value="P4">Package 4</option><option value="P5">Package 5</option><option value="P6">Package 6</option></select>
+              </div>
+              <div class="settings-row settings-row-stacked"><span class="settings-label">App Theme</span>
+                <select id="pref-theme" class="settings-select"><option value="default">Default (Light)</option><option value="dark">Dark Mode</option><option value="compact">Compact</option></select>
+              </div>
+            </div>
+
+            <div class="settings-card settings-card-danger">
+              <div class="settings-card-title">⚠️ Data</div>
+              <p style="font-size:.85rem;color:#888;margin-bottom:14px;">Clears local submission history only. Server data is not affected.</p>
+              <button class="btn btn-secondary settings-btn" onclick="clearSessionHistory()">🗑 Clear Local History</button>
+            </div>
+
+            <!-- Mobile-only save row (inside column, shows on mobile) -->
+            <div class="settings-save-row mobile-only">
+              <button class="btn btn-primary" onclick="saveUserSettings()">💾 Save Settings</button>
+              <button class="btn btn-secondary" onclick="logout()">Sign Out</button>
+            </div>
+          </div>
+
+          <!-- Desktop save row: spans both columns, anchored at bottom -->
+          <div class="settings-save-row desktop-only">
+            <button class="btn btn-primary" onclick="saveUserSettings()">💾 Save Settings</button>
+          </div>
         </div>
-        <div class="notif-actions">
-          <button id="settings-notif-btn" class="btn btn-secondary settings-btn" onclick="requestNotificationPermission()">🔔 Enable</button>
-          <button class="btn btn-secondary settings-btn" onclick="sendTestNotification()">🧪 Test</button>
-        </div>
       </div>
-
-      <div class="settings-card">
-        <div class="settings-card-title">🎛️ Preferences</div>
-        <div class="settings-row settings-row-stacked"><span class="settings-label">Default Package</span>
-          <select id="pref-default-package" class="settings-select"><option value="">None</option><option value="P4">Package 4</option><option value="P5">Package 5</option><option value="P6">Package 6</option></select>
-        </div>
-        <div class="settings-row settings-row-stacked"><span class="settings-label">App Theme</span>
-          <select id="pref-theme" class="settings-select"><option value="default">Default (Light)</option><option value="dark">Dark Mode</option><option value="compact">Compact</option></select>
-        </div>
-      </div>
-
-      <div class="settings-card settings-card-danger">
-        <div class="settings-card-title">⚠️ Data</div>
-        <p style="font-size:.85rem;color:#888;margin-bottom:14px;">Clears local submission history only. Server data is not affected.</p>
-        <button class="btn btn-secondary settings-btn" onclick="clearSessionHistory()">Clear Local History</button>
-      </div>
-
-      <button class="btn btn-primary" onclick="saveUserSettings()" style="margin-top:6px;">💾 Save Settings</button>
-      <button class="btn btn-secondary" onclick="logout()" style="margin-top:10px;">Sign Out</button>
     </div>
 
     <!-- ═══ ADMIN DASHBOARD ═══ -->
     <div id="admin-dashboard" class="section admin-only">
+      <div class="section-page-header" style="display:none;" id="admin-dash-page-header">
+        <div class="section-page-header-text">
+          <div class="section-page-header-title">Admin Dashboard</div>
+          <div class="section-page-header-sub">Manage users and monitor system activity</div>
+        </div>
+      </div>
       <div class="admin-dash-header">
         <h2>🛡️ Admin Dashboard</h2>
         <p>Manage users and monitor system activity</p>
@@ -289,9 +483,15 @@
       </div>
     </div>
 
-    <!-- ═══ ANALYTICS (admin-only) ═══ -->
-    <div id="analytics-section" class="section admin-only">
+    <!-- ═══ ANALYTICS ═══ -->
+    <div id="analytics-section" class="section admin-only has-page-header">
       <button class="back-btn" onclick="backToAdminDashboard()">← Admin Dashboard</button>
+      <div class="section-page-header">
+        <div class="section-page-header-text">
+          <div class="section-page-header-title">Waste Analytics</div>
+          <div class="section-page-header-sub">Visualize trends and export reports</div>
+        </div>
+      </div>
       <div class="breadcrumb"><span class="breadcrumb-item" onclick="backToAdminDashboard()">Admin</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item active">Analytics</span></div>
       <h2 class="section-title">📊 Waste Analytics</h2>
 
@@ -300,14 +500,13 @@
         <div class="filter-col"><label>Waste Type</label><select id="analytics-waste-type" class="analytics-select"><option value="hazardous">Hazardous</option><option value="solid">Solid</option></select></div>
         <div class="filter-col"><label>Filter By</label><select id="analytics-filter-mode" class="analytics-select" onchange="toggleAnalyticsFilterMode()"><option value="period">Period</option><option value="range">Date Range</option></select></div>
         <div class="filter-col" id="analytics-period-col"><label>Period</label><select id="analytics-period" class="analytics-select"><option value="7">Past 7 days</option><option value="30" selected>Past 30 days</option><option value="60">Past 60 days</option><option value="90">Past 90 days</option></select></div>
-        <!-- Date range row — hidden until mode=range -->
         <div id="analytics-range-row" style="display:none;grid-column:1/-1;display:none;gap:12px;grid-template-columns:1fr 1fr;">
           <div class="filter-col" style="margin:0;"><label>From</label><input type="date" id="analytics-from" class="analytics-select" style="width:100%;"></div>
           <div class="filter-col" style="margin:0;"><label>To</label><input type="date" id="analytics-to" class="analytics-select" style="width:100%;"></div>
         </div>
         <div style="grid-column:1/-1;display:flex;gap:10px;flex-wrap:wrap;">
-          <button class="btn btn-primary" onclick="loadAnalytics()" style="height:42px;flex:1;min-width:120px;">Apply Filters</button>
-          <button class="btn" id="analytics-pdf-btn" onclick="generateAnalyticsPDF()" style="height:42px;flex:1;min-width:120px;background:#fff;border:1.5px solid #d32f2f;color:#d32f2f;font-weight:600;" disabled>📄 Export PDF</button>
+          <button class="btn btn-primary" onclick="loadAnalytics()" style="height:40px;flex:1;min-width:120px;">Apply Filters</button>
+          <button class="btn" id="analytics-pdf-btn" onclick="generateAnalyticsPDF()" style="height:40px;flex:1;min-width:120px;background:#fff;border:1.5px solid #d32f2f;color:#d32f2f;font-weight:600;" disabled>📄 Export PDF</button>
         </div>
       </div>
 
@@ -318,24 +517,20 @@
       <div id="analytics-content" style="display:none;">
         <div id="analytics-no-data" class="empty-state" style="display:none;"><div class="icon">📭</div><p><strong>No data for this period</strong></p></div>
         <div id="analytics-charts" style="display:none;">
-          <!-- KPIs -->
           <div class="kpi-grid">
             <div class="kpi-card"><div class="kpi-label">Total Entries</div><div class="kpi-value" id="kpi-entries">—</div></div>
-            <div class="kpi-card"><div class="kpi-label">Total Entries</div><div class="kpi-value" id="kpi-volume">—</div></div>
+            <div class="kpi-card"><div class="kpi-label">Total Volume</div><div class="kpi-value" id="kpi-volume">—</div></div>
             <div class="kpi-card"><div class="kpi-label">Top Waste</div><div class="kpi-value kpi-sm" id="kpi-top-waste">—</div></div>
             <div class="kpi-card"><div class="kpi-label">Avg / Day</div><div class="kpi-value" id="kpi-avg-day">—</div></div>
           </div>
-          <!-- Trend -->
           <div class="chart-card">
             <div class="chart-card-title">📈 Daily Trend</div>
             <div class="chart-wrap"><canvas id="analytics-trend-chart"></canvas></div>
           </div>
-          <!-- Breakdown -->
           <div class="chart-card">
             <div class="chart-card-title">📊 Waste Breakdown</div>
             <div class="chart-wrap" style="height:200px;"><canvas id="analytics-breakdown-chart"></canvas></div>
           </div>
-          <!-- Contributors -->
           <div class="chart-card">
             <div class="chart-card-title">👥 Top Contributors</div>
             <div id="analytics-contributors"></div>
@@ -345,15 +540,22 @@
     </div>
 
     <!-- ═══ USER MANAGEMENT ═══ -->
-    <div id="user-management-section" class="section admin-only">
+    <div id="user-management-section" class="section admin-only has-page-header">
       <button class="back-btn" onclick="backToAdminDashboard()">← Admin Dashboard</button>
+      <div class="section-page-header">
+        <div class="section-page-header-text">
+          <div class="section-page-header-title">User Management</div>
+          <div class="section-page-header-sub">Approve, reject and manage user roles</div>
+        </div>
+        <div class="section-page-header-actions">
+          <button class="btn btn-sm" onclick="loadUsers()">↻ Refresh</button>
+        </div>
+      </div>
       <div class="breadcrumb"><span class="breadcrumb-item" onclick="backToAdminDashboard()">Admin</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item active">Users</span></div>
       <div class="admin-card">
         <div class="admin-header"><h2>👥 User Management</h2><p>Manage user access and roles</p></div>
         <div class="admin-block">
-          <div class="admin-block-header"><h3>All Users</h3><button class="btn btn-sm" onclick="loadUsers()">↻ Refresh</button></div>
-
-          <!-- Filter Bar -->
+          <div class="admin-block-header"><h3>All Users</h3></div>
           <div class="user-filter-bar">
             <div class="user-filter-search">
               <span class="filter-icon">🔍</span>
@@ -373,7 +575,6 @@
             </select>
             <span id="uf-count" class="filter-count"></span>
           </div>
-
           <div class="admin-table-wrap">
             <table class="admin-table">
               <thead><tr><th>Email</th><th>Status</th><th>Role</th><th>Action</th></tr></thead>
@@ -385,14 +586,23 @@
     </div>
 
     <!-- ═══ REQUEST LOGS ═══ -->
-    <div id="request-logs-section" class="section admin-only">
+    <div id="request-logs-section" class="section admin-only has-page-header">
       <button class="back-btn" onclick="backToAdminDashboard()">← Admin Dashboard</button>
+      <div class="section-page-header">
+        <div class="section-page-header-text">
+          <div class="section-page-header-title">Request Logs</div>
+          <div class="section-page-header-sub">System activity and idempotency history</div>
+        </div>
+        <div class="section-page-header-actions">
+          <button class="btn btn-sm" onclick="loadRequests()">↻ Refresh</button>
+        </div>
+      </div>
       <div class="breadcrumb"><span class="breadcrumb-item" onclick="backToAdminDashboard()">Admin</span><span class="breadcrumb-sep">›</span><span class="breadcrumb-item active">Logs</span></div>
       <div class="admin-card">
         <div class="admin-header"><h2>📝 Request Logs</h2><p>System activity history</p></div>
         <div class="admin-block">
-          <div class="admin-block-header"><h3>Recent Requests</h3><button class="btn btn-sm" onclick="loadRequests()">Refresh</button></div>
-          <table class="admin-table"><thead><tr><th>Request ID</th><th>Time</th></tr></thead><tbody id="requestsTableBody"></tbody></table>
+          <div class="admin-block-header"><h3>Recent Requests</h3></div>
+          <table class="admin-table request-log-table"><thead><tr><th>Request ID</th><th>Time</th></tr></thead><tbody id="requestsTableBody"></tbody></table>
         </div>
       </div>
     </div>
@@ -400,6 +610,28 @@
   </div><!-- /content -->
 
   <div class="footer">Created by <strong>E. Francis Albert</strong></div>
+
+  <!-- ═══ MOBILE BOTTOM TAB BAR ═══ -->
+  <nav class="mobile-tab-bar" id="mobile-tab-bar" style="display:none;">
+    <button class="tab-btn" id="tab-home" onclick="mobileTabNav('home')">
+      <span class="tab-icon">🏠</span>
+      <span class="tab-label">Home</span>
+    </button>
+    <button class="tab-btn" id="tab-log" onclick="mobileTabNav('log')">
+      <span class="tab-icon">✏️</span>
+      <span class="tab-label">Log</span>
+    </button>
+    <button class="tab-btn" id="tab-records" onclick="mobileTabNav('records')">
+      <span class="tab-icon">📋</span>
+      <span class="tab-label">Records</span>
+    </button>
+    <button class="tab-btn" id="tab-settings" onclick="mobileTabNav('settings')">
+      <span class="tab-icon">⚙️</span>
+      <span class="tab-label">Settings</span>
+      <span class="tab-badge" id="tab-pending-badge"></span>
+    </button>
+  </nav>
+
 </div><!-- /app-container -->
 
 <!-- Image modal -->
@@ -410,12 +642,13 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="demo.js"></script>
 <script src="script.js"></script>
 
   <!-- ═══ ENTRY EDIT MODAL ═══ -->
-  <div id="entry-edit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);justify-content:center;align-items:center;z-index:9998;">
-    <div style="background:var(--bg,#fff);border-radius:16px;padding:24px;width:90%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
-      <h3 id="edit-modal-title" style="margin-bottom:18px;color:var(--text,#333);font-size:1.1rem;">Edit Entry</h3>
+  <div id="entry-edit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);justify-content:center;align-items:center;z-index:9998;backdrop-filter:blur(4px);">
+    <div style="background:var(--bg,#fff);border-radius:16px;padding:28px;width:90%;max-width:420px;box-shadow:0 24px 64px rgba(0,0,0,0.25);border:1px solid var(--border,#e3e5eb);">
+      <h3 id="edit-modal-title" style="margin-bottom:20px;color:var(--text,#1a1d23);font-size:1.1rem;font-weight:700;letter-spacing:-0.3px;">Edit Entry</h3>
       <div class="form-group">
         <label>Date</label>
         <input type="date" id="edit-date">
@@ -426,14 +659,28 @@
       </div>
       <div class="form-group">
         <label>Waste Type</label>
-        <input type="text" id="edit-waste" placeholder="Waste type">
+        <select id="edit-waste" style="width:100%;height:46px;padding:0 14px;border:1.5px solid var(--border,#e3e5eb);border-radius:10px;font-size:0.95rem;font-family:inherit;background:var(--bg2,#f4f5f7);color:var(--text,#1a1d23);transition:border-color 0.2s;">
+        </select>
       </div>
-      <div style="display:flex;gap:10px;margin-top:8px;">
-        <button id="edit-save-btn" class="btn btn-primary" style="flex:1;" onclick="saveEditEntry()">Save</button>
+      <div style="display:flex;gap:10px;margin-top:16px;">
+        <button id="edit-save-btn" class="btn btn-primary" style="flex:1;" onclick="saveEditEntry()">Save Changes</button>
         <button class="btn btn-secondary" style="flex:1;" onclick="closeEditModal()">Cancel</button>
       </div>
     </div>
   </div>
+
+<!-- ═══ IN-APP CONFIRM MODAL (replaces native confirm/alert) ═══ -->
+<div id="wms-confirm-modal" class="wms-confirm-overlay" style="display:none;">
+  <div class="wms-confirm-box">
+    <div class="wms-confirm-icon" id="wms-confirm-icon">⚠️</div>
+    <h3 class="wms-confirm-title" id="wms-confirm-title">Are you sure?</h3>
+    <p class="wms-confirm-msg" id="wms-confirm-msg"></p>
+    <div class="wms-confirm-actions">
+      <button class="btn btn-secondary" id="wms-confirm-cancel" onclick="wmsConfirmResolve(false)">Cancel</button>
+      <button class="btn btn-primary" id="wms-confirm-ok" onclick="wmsConfirmResolve(true)">Confirm</button>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>

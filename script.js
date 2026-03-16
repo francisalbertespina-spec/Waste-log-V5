@@ -15,6 +15,75 @@ let submissionFingerprints = new Map();
 const FINGERPRINT_LOCK_DURATION = 120000;
 
 // ═══════════════════════════════════════════════════════════════════════════
+// IN-APP CONFIRM / ALERT  (replaces native confirm() and alert())
+// ═══════════════════════════════════════════════════════════════════════════
+
+let _wmsConfirmResolve = null;
+
+function wmsConfirmResolve(result) {
+  const modal = document.getElementById('wms-confirm-modal');
+  if (modal) modal.style.display = 'none';
+  if (_wmsConfirmResolve) { _wmsConfirmResolve(result); _wmsConfirmResolve = null; }
+}
+
+function wmsConfirm({ title = 'Are you sure?', msg = '', icon = '⚠️', okText = 'Confirm', okDanger = true } = {}) {
+  return new Promise(resolve => {
+    _wmsConfirmResolve = resolve;
+    document.getElementById('wms-confirm-title').textContent = title;
+    document.getElementById('wms-confirm-msg').textContent   = msg;
+    document.getElementById('wms-confirm-icon').textContent  = icon;
+    const okBtn = document.getElementById('wms-confirm-ok');
+    okBtn.textContent = okText;
+    okBtn.className   = `btn ${okDanger ? 'btn-primary' : 'btn-primary'}`;
+    const modal = document.getElementById('wms-confirm-modal');
+    if (modal) modal.style.display = 'flex';
+  });
+}
+
+function wmsAlert({ title = 'Notice', msg = '', icon = 'ℹ️' } = {}) {
+  return new Promise(resolve => {
+    _wmsConfirmResolve = resolve;
+    document.getElementById('wms-confirm-title').textContent = title;
+    document.getElementById('wms-confirm-msg').textContent   = msg;
+    document.getElementById('wms-confirm-icon').textContent  = icon;
+    document.getElementById('wms-confirm-ok').textContent    = 'OK';
+    document.getElementById('wms-confirm-cancel').style.display = 'none';
+    const modal = document.getElementById('wms-confirm-modal');
+    if (modal) modal.style.display = 'flex';
+  }).finally(() => {
+    const cancelBtn = document.getElementById('wms-confirm-cancel');
+    if (cancelBtn) cancelBtn.style.display = '';
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SPLASH SCREEN
+// ═══════════════════════════════════════════════════════════════════════════
+
+function hideSplash() {
+  const splash = document.getElementById('wms-splash');
+  if (splash) {
+    splash.classList.add('hidden');
+    setTimeout(() => { if (splash.parentNode) splash.parentNode.removeChild(splash); }, 450);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// OFFLINE BANNER
+// ═══════════════════════════════════════════════════════════════════════════
+
+function initOfflineBanner() {
+  const banner = document.getElementById('wms-offline-banner');
+  if (!banner) return;
+  const update = () => {
+    banner.style.display = navigator.onLine ? 'none' : 'block';
+  };
+  update();
+  window.addEventListener('online',  () => { update(); showToast('Back online!', 'success'); });
+  window.addEventListener('offline', () => { update(); showToast('You are offline', 'error', { duration: 4000 }); });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // 1. PUSH NOTIFICATION ENGINE  (admin-only)
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -29,7 +98,7 @@ async function initNotifications() {
   try {
     swRegistration = await navigator.serviceWorker.register('./sw.js', { scope: './' });
     navigator.serviceWorker.addEventListener('message', handleSwMessage);
-  } catch (err) { console.warn('[NOTIF] SW reg failed:', err); }
+  } catch (err) { if(DEV_MODE) console.warn('[NOTIF] SW reg failed:', err); }
   updateNotifUI();
   if (notifPermission === 'granted') startNotifPolling();
 }
@@ -77,7 +146,7 @@ async function checkPendingUsers(forceNotify = false) {
       fireAdminNotification(count, diff > 0 ? diff : count, pending);
     }
     lastKnownPendingCount = count;
-  } catch (err) { console.error('[NOTIF] poll error:', err); }
+  } catch (err) { if(DEV_MODE) console.error('[NOTIF] poll error:', err); }
 }
 
 function fireAdminNotification(total, newCount, pendingUsers) {
@@ -274,8 +343,11 @@ function generateRequestId(fp) { return `${fp}-${new Date().toISOString().split(
 // ═══════════════════════════════════════════════════════════════════════════
 
 async function stampImageWithWatermark(file, email, pkg) {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) { alert("GPS not supported"); return reject("No GPS"); }
+  return new Promise(async (resolve, reject) => {
+    if (!navigator.geolocation) {
+      await wmsAlert({ title: 'GPS Not Supported', msg: 'Your device does not support GPS location.', icon: '📍' });
+      return reject("No GPS");
+    }
     navigator.geolocation.getCurrentPosition(pos => {
       const lat = pos.coords.latitude, lng = pos.coords.longitude;
       const img = new Image(), reader = new FileReader();
@@ -297,7 +369,10 @@ async function stampImageWithWatermark(file, email, pkg) {
         img.src = reader.result;
       };
       reader.readAsDataURL(file);
-    }, err => { alert("GPS required."); reject(err); }, {enableHighAccuracy:true,timeout:10000});
+    }, async err => {
+      await wmsAlert({ title: 'GPS Required', msg: 'Location access is required to stamp photos. Please allow location and try again.', icon: '📍' });
+      reject(err);
+    }, {enableHighAccuracy:true,timeout:10000});
   });
 }
 
@@ -315,9 +390,8 @@ function processToastQueue() {
   const {msg,type,persistent,spinner,duration} = toastQueue.shift();
   const t = document.createElement("div"); t.className=`toast ${type}`;
   const ic = document.createElement("div"); ic.className="toast-icon";
-  if (spinner) { const s=document.createElement("div"); s.className="toast-spinner"; ic.appendChild(s); }
-  else ic.textContent = {success:"✅",error:"❌",info:"ℹ️"}[type]||"ℹ️";
-  t.appendChild(ic);
+  if (spinner) { const s=document.createElement("div"); s.className="toast-spinner"; t.appendChild(s); }
+  else { ic.textContent = {success:"✓",error:"✕",info:"i"}[type]||"i"; t.appendChild(ic); }
   const m = document.createElement("div"); m.className="toast-message"; m.textContent=msg;
   t.appendChild(m); document.body.appendChild(t); activeToast=t;
   if (!persistent) toastTimer = setTimeout(()=>dismissToast(t), type==="error"?8000:duration||3000);
@@ -325,7 +399,7 @@ function processToastQueue() {
 function dismissToast(t) {
   if (!t) return; clearTimeout(toastTimer); toastTimer=null;
   t.classList.add("hide");
-  setTimeout(()=>{ t.remove(); activeToast=null; processToastQueue(); },300);
+  setTimeout(()=>{ t.remove(); activeToast=null; processToastQueue(); },280);
 }
 function setLoginLoading(on) {
   const b=document.getElementById("buttonDiv"), l=document.getElementById("loginLoadingUI");
@@ -416,8 +490,14 @@ function applyTheme(t) {
   if (t==='compact') document.body.classList.add('theme-compact');
 }
 
-function clearSessionHistory() {
-  if (!confirm('Clear local submission history?\nServer data is not affected.')) return;
+async function clearSessionHistory() {
+  const ok = await wmsConfirm({
+    title: 'Clear Local History?',
+    msg: 'This removes local submission records only. Server data is not affected.',
+    icon: '🗑️',
+    okText: 'Clear'
+  });
+  if (!ok) return;
   localStorage.removeItem('completedSubmissions');
   showToast('Local history cleared','success');
   renderUserSettings();
@@ -450,6 +530,15 @@ function sortUsers(users) {
 let _allUsers = []; // cache for client-side filtering
 
 async function loadUsers() {
+  // Show spinner in table and disable refresh button
+  const tbody = document.getElementById('usersTableBody');
+  const refreshBtn = document.querySelector('#user-management-section .btn-sm');
+  if (tbody) tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:28px 0;">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:10px;">
+      <div class="spinner" style="margin:0;"></div>
+      <span style="color:#999;font-size:0.88rem;">Loading users…</span>
+    </div></td></tr>`;
+  if (refreshBtn) { refreshBtn.disabled = true; refreshBtn.textContent = '…'; }
   try {
     const res   = await authenticatedFetch(`${scriptURL}?action=getUsers`);
     const users = await res.json();
@@ -458,8 +547,11 @@ async function loadUsers() {
     const p = users.filter(u=>u.status==='Pending').length;
     updatePendingBadge(p);
     lastKnownPendingCount = p;
-    applyUserFilters(); // render with any active filters
+    applyUserFilters();
   } catch { showToast("Failed to load users","error"); }
+  finally {
+    if (refreshBtn) { refreshBtn.disabled = false; refreshBtn.textContent = '↻ Refresh'; }
+  }
 }
 
 function applyUserFilters() {
@@ -507,7 +599,15 @@ function renderUsers(users) {
 }
 
 function applyDropdownStyling() {
-  document.querySelectorAll('.status-select,.role-select').forEach(s=>s.setAttribute('value',s.value));
+  document.querySelectorAll('.status-select,.role-select').forEach(s => {
+    s.setAttribute('value', s.value);
+    // Color individual <option> elements
+    s.querySelectorAll('option').forEach(o => {
+      if (o.value === 'Approved')     { o.style.background='#e8f5e9'; o.style.color='#2e7d32'; }
+      else if (o.value === 'Pending') { o.style.background='#fff8e1'; o.style.color='#e65100'; }
+      else if (o.value === 'Rejected'){ o.style.background='#ffebee'; o.style.color='#c62828'; }
+    });
+  });
 }
 
 async function quickApprove(email) {
@@ -523,11 +623,43 @@ async function updateUserRole(email,role) {
   try { const sel=event?.target; if(sel){sel.classList.add('loading');sel.disabled=true;} const r=await authenticatedFetch(`${scriptURL}?action=updateUserRole&email=${encodeURIComponent(email)}&role=${role}`); const d=await r.json(); if(sel){sel.classList.remove('loading');sel.disabled=false;} if(d.success||d.status==='success'){showToast(`Role → ${role}`,'success');await loadUsers();}else{showToast(d.message||'Failed','error');await loadUsers();} } catch(e){showToast(e.message,'error');await loadUsers();}
 }
 async function deleteUser(email) {
-  if(!confirm(`Delete ${email}?\nCannot be undone.`))return;
+  const ok = await wmsConfirm({
+    title: 'Delete User?',
+    msg: `Remove ${email} permanently? This cannot be undone.`,
+    icon: '🗑️',
+    okText: 'Delete'
+  });
+  if (!ok) return;
   try { const r=await authenticatedFetch(`${scriptURL}?action=deleteUser&email=${encodeURIComponent(email)}`); const d=await r.json(); if(d.success||d.status==='success'){showToast('Deleted','success');loadUsers();}else showToast(d.message||'Failed','error'); } catch{showToast('Error deleting','error');}
 }
 async function loadRequests() {
-  try { const r=await authenticatedFetch(`${scriptURL}?action=getRequests`); const list=await r.json(); const tb=document.getElementById("requestsTableBody"); tb.innerHTML=""; list.forEach(req=>{const tr=document.createElement("tr"); tr.innerHTML=`<td style="text-align:left;">${req.id}</td><td>${new Date(req.time).toLocaleString()}</td>`; tb.appendChild(tr);}); } catch{showToast("Failed to load logs","error");}
+  const tb = document.getElementById("requestsTableBody");
+  const refreshBtn = document.querySelector('#request-logs-section .btn-sm');
+  if (tb) tb.innerHTML = `<tr><td colspan="2" style="text-align:center;padding:28px 0;">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:10px;">
+      <div class="spinner" style="margin:0;"></div>
+      <span style="color:#999;font-size:0.88rem;">Loading logs…</span>
+    </div></td></tr>`;
+  if (refreshBtn) { refreshBtn.disabled = true; refreshBtn.textContent = '…'; }
+  try {
+    const r = await authenticatedFetch(`${scriptURL}?action=getRequests`);
+    const list = await r.json();
+    if (tb) {
+      tb.innerHTML = "";
+      if (!list.length) {
+        tb.innerHTML = `<tr><td colspan="2" style="text-align:center;padding:20px;color:#999;">No logs found</td></tr>`;
+      } else {
+        list.forEach(req => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `<td style="text-align:left;word-break:break-all;">${req.id}</td><td style="text-align:left;">${new Date(req.time).toLocaleString()}</td>`;
+          tb.appendChild(tr);
+        });
+      }
+    }
+  } catch { showToast("Failed to load logs","error"); }
+  finally {
+    if (refreshBtn) { refreshBtn.disabled = false; refreshBtn.textContent = 'Refresh'; }
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -619,7 +751,7 @@ async function loadAnalytics() {
   } catch (err) {
     document.getElementById('analytics-loading').style.display = 'none';
     showToast('Error loading analytics', 'error');
-    console.error(err);
+    if(DEV_MODE) console.error(err);
   }
 }
 
@@ -861,7 +993,7 @@ async function generateAnalyticsPDF() {
     showToast('Analytics PDF exported!', 'success');
 
   } catch (err) {
-    console.error(err);
+    if(DEV_MODE) console.error(err);
     document.querySelectorAll('.toast').forEach(t => t.remove());
     activeToast = null;
     toastQueue.length = 0;
@@ -961,7 +1093,17 @@ async function submitEntry(type, fields, btn) {
     const res=await authenticatedFetch(scriptURL,{method:'POST',body:JSON.stringify(payload),signal:ctrl.signal});
     const data=await res.json();
     if(activeToast)dismissToast(activeToast);
-    if(data.success||data.error==='Duplicate request'){markSubmissionAsCompleted(fpKey);showToast('Entry submitted!','success');resetForm(type);}
+    if(data.success||data.error==='Duplicate request'){
+      markSubmissionAsCompleted(fpKey);
+      // #10 Auto-save last used form values before reset
+      if (type === 'hazardous') {
+        saveLastFormValues('hazardous', { waste: fields.waste });
+      } else {
+        saveLastFormValues('solid', { waste: fields.waste, location: fields.location });
+      }
+      showToast('Entry submitted!','success');
+      resetForm(type);
+    }
     else{setTimeout(()=>submissionFingerprints.delete(fpKey),30000);showToast(data.error||'Failed','error');}
   } catch(e) {
     if(activeToast)dismissToast(activeToast);
@@ -1022,7 +1164,7 @@ async function loadHistory(type) {
       // r[7] = sheet row index appended by backend (r[6] is system timestamp; row index is at index 7)
       // If backend doesn't supply it, we cannot reliably delete/edit — show warning once
       const rowIndex = (r[7] !== undefined && r[7] !== null && !isNaN(Number(r[7]))) ? Number(r[7]) : null;
-      if(rowIndex === null && idx === 0) console.warn('[WMS] Row index missing from backend — update Code.gs fetchEntries to include row index');
+      if(rowIndex === null && idx === 0) if(DEV_MODE) console.warn('[WMS] Row index missing from backend — update Code.gs fetchEntries to include row index');
       window._entryRowCache[rowIndex] = { type, date: r[0], valueField: r[1], waste: r[2] };
       const date=new Date(r[0]).toLocaleDateString("en-US",{year:"numeric",month:"short",day:"numeric"});
       let img=''; if(r[5]){const m=r[5].match(/\/d\/([^/]+)/);img=m?`https://drive.google.com/uc?export=view&id=${m[1]}`:r[5];}
@@ -1050,7 +1192,7 @@ async function loadHistory(type) {
       }
       tb.appendChild(tr);
     });
-  } catch(err){document.getElementById(`${type}-loading`).style.display='none';showToast('Error loading data','error');console.error(err);}
+  } catch(err){document.getElementById(`${type}-loading`).style.display='none';showToast('Error loading data','error');if(DEV_MODE) console.error(err);}
 }
 
 // ── Entry edit modal ─────────────────────────────────────────────────────────
@@ -1068,7 +1210,25 @@ function openEditModal(type, rowIndex) {
   const yyyy=d.getFullYear(), mm=String(d.getMonth()+1).padStart(2,'0'), dd=String(d.getDate()).padStart(2,'0');
   document.getElementById('edit-date').value = `${yyyy}-${mm}-${dd}`;
   document.getElementById('edit-value').value = row.valueField || '';
-  document.getElementById('edit-waste').value = row.waste || '';
+
+  // Populate waste type dropdown with correct options for the type
+  const wasteSelect = document.getElementById('edit-waste');
+  const hazOptions = [
+    'Used Oil',
+    'Pathological and Infectious Waste',
+    'Lead Compounds',
+    'Oil Contaminated Materials',
+    'Grease Waste',
+    'Waste Electrical and Electronic Equipment',
+    'Mercury and Mercury Compounds',
+    'Containers Previously containing toxic chemical substances'
+  ];
+  const solidOptions = ['Residual', 'Scrap'];
+  const options = isHaz ? hazOptions : solidOptions;
+  wasteSelect.innerHTML = options.map(o =>
+    `<option value="${o}"${o === (row.waste||'') ? ' selected' : ''}>${o}</option>`
+  ).join('');
+
   document.getElementById('entry-edit-modal').style.display='flex';
 }
 
@@ -1098,7 +1258,13 @@ async function saveEditEntry() {
 }
 
 async function deleteEntry(type, rowIndex) {
-  if(!confirm('Delete this entry?\nThis cannot be undone.'))return;
+  const ok = await wmsConfirm({
+    title: 'Delete Entry?',
+    msg: 'This entry will be permanently removed from the server. This cannot be undone.',
+    icon: '🗑️',
+    okText: 'Delete'
+  });
+  if (!ok) return;
   try {
     const url=`${scriptURL}?action=deleteEntry&package=${selectedPackage}&wasteType=${type}&rowIndex=${rowIndex}`;
     const res=await authenticatedFetch(url);
@@ -1125,7 +1291,7 @@ async function exportExcel(type) {
     const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"Records");
     XLSX.writeFile(wb,`${type}_waste_${selectedPackage}_${new Date().toISOString().split('T')[0]}.xlsx`);
     showToast("Excel exported!","success");
-  }catch(e){console.error(e);showToast("Export failed","error");}
+  }catch(e){if(DEV_MODE) console.error(e);showToast("Export failed","error");}
   finally{btn.disabled=false;btn.textContent="Export Excel";}
 }
 
@@ -1193,7 +1359,7 @@ async function fetchImageViaProxy(fileId) {
     }
     if (!res.ok) return null;
     const data = await res.json();
-    if (data.error) { console.warn('[PDF] Proxy error:', data.error); return null; }
+    if (data.error) { if(DEV_MODE) console.warn('[PDF] Proxy error:', data.error); return null; }
     if (data.base64 && data.mimeType) {
       return {
         dataUrl: `data:${data.mimeType};base64,${data.base64}`,
@@ -1203,7 +1369,7 @@ async function fetchImageViaProxy(fileId) {
     }
     return null;
   } catch (err) {
-    console.warn('[PDF] fetchImageViaProxy failed:', err.message);
+    if(DEV_MODE) console.warn('[PDF] fetchImageViaProxy failed:', err.message);
     return null;
   }
 }
@@ -1448,7 +1614,7 @@ async function generatePDFReport(type) {
     showToast('PDF generated!', 'success');
 
   } catch (e) {
-    console.error(e);
+    if(DEV_MODE) console.error(e);
     document.querySelectorAll('.toast').forEach(t => t.remove());
     activeToast = null;
     toastQueue.length = 0;
@@ -1489,18 +1655,84 @@ function updateModeLabels(on){document.getElementById('mode-label-user')?.classL
 function updateToggleState(id){const t=document.getElementById('admin-mode-toggle');if(!t)return;const admin=['admin-dashboard','user-management-section','request-logs-section','analytics-section'].includes(id);t.checked=admin;updateModeLabels(admin);}
 function enableAdminUI(){document.body.classList.add("is-admin");const mt=document.getElementById('mode-toggle');if(mt)mt.style.display='flex';}
 
-async function logout(){
-  if(!confirm('Sign out?'))return;
-  showToast('Signing out…','info',{persistent:true});
-  try{await authenticatedFetch(`${scriptURL}?action=logout`);}catch{}
-  ['userToken','tokenExpiry','userRole','userEmail','completedSubmissions'].forEach(k=>localStorage.removeItem(k));
-  document.body.classList.remove('is-admin');
-  const ui=document.getElementById('user-info');if(ui)ui.style.display='none';
-  if(sessionCheckTimer){clearInterval(sessionCheckTimer);sessionCheckTimer=null;}
-  stopTokenRefreshTimer();stopNotifPolling();
-  if(window.google?.accounts?.id)google.accounts.id.disableAutoSelect();
-  showSection('login-section');
-  setTimeout(()=>location.reload(),500);
+function logout() {
+  // Build a polished sign-out confirmation modal
+  const existing = document.getElementById('logout-modal');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'logout-modal';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.42);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;z-index:99998;animation:fadeIn 0.18s ease-out;';
+
+  overlay.innerHTML = `
+    <div style="
+      background:var(--bg,#fff);border-radius:22px;padding:34px 28px 26px;
+      width:90%;max-width:310px;text-align:center;
+      box-shadow:0 28px 64px rgba(0,0,0,0.26),0 4px 16px rgba(0,0,0,0.12);
+      border:1px solid var(--border,#e8e8e8);
+      animation:modal-pop 0.38s cubic-bezier(0.175,0.885,0.32,1.275) forwards;
+    ">
+      <div style="width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,#ff5252 0%,#c62828 100%);
+        display:flex;align-items:center;justify-content:center;margin:0 auto 18px;
+        box-shadow:0 8px 22px rgba(198,40,40,0.38);font-size:1.5rem;line-height:1;">🚪</div>
+      <h3 style="margin:0 0 7px;font-size:1.08rem;color:var(--text,#1a1a1a);font-weight:750;letter-spacing:-0.2px;">Sign out?</h3>
+      <p style="margin:0 0 26px;font-size:0.85rem;color:var(--text2,#777);line-height:1.55;">
+        You'll need to sign back in to access the WMS.
+      </p>
+      <div style="display:flex;gap:10px;">
+        <button id="lo-cancel" style="
+          flex:1;height:44px;border-radius:13px;
+          border:1.5px solid var(--border,#e0e0e0);
+          background:var(--bg2,#f5f5f5);color:var(--text,#333);
+          font-size:0.88rem;font-weight:650;cursor:pointer;transition:background 0.15s;">
+          Cancel
+        </button>
+        <button id="lo-confirm" style="
+          flex:1;height:44px;border-radius:13px;border:none;
+          background:linear-gradient(135deg,#e53935,#c62828);
+          color:#fff;font-size:0.88rem;font-weight:700;
+          cursor:pointer;letter-spacing:0.02em;
+          box-shadow:0 4px 14px rgba(198,40,40,0.32);
+          transition:transform 0.15s,box-shadow 0.15s;">
+          Sign Out
+        </button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(overlay);
+
+  const cancelBtn  = overlay.querySelector('#lo-cancel');
+  const confirmBtn = overlay.querySelector('#lo-confirm');
+
+  const closeModal = () => {
+    overlay.style.animation = 'fadeIn 0.2s ease-out reverse forwards';
+    setTimeout(() => overlay.remove(), 200);
+  };
+
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+  cancelBtn.addEventListener('click', closeModal);
+  cancelBtn.addEventListener('mouseenter', () => cancelBtn.style.background = 'var(--border-lt,#ebebeb)');
+  cancelBtn.addEventListener('mouseleave', () => cancelBtn.style.background = 'var(--bg2,#f5f5f5)');
+  confirmBtn.addEventListener('mouseenter', () => { confirmBtn.style.transform='translateY(-1px)'; confirmBtn.style.boxShadow='0 7px 20px rgba(198,40,40,0.42)'; });
+  confirmBtn.addEventListener('mouseleave', () => { confirmBtn.style.transform=''; confirmBtn.style.boxShadow='0 4px 14px rgba(198,40,40,0.32)'; });
+
+  confirmBtn.addEventListener('click', async () => {
+    closeModal();
+    await new Promise(r => setTimeout(r, 160));
+    showToast('Signing out…', 'info', {persistent:true, spinner:true});
+    try { await authenticatedFetch(`${scriptURL}?action=logout`); } catch {}
+    ['userToken','tokenExpiry','userRole','userEmail','completedSubmissions'].forEach(k => localStorage.removeItem(k));
+    document.body.classList.remove('is-admin');
+    const ui = document.getElementById('user-info'); if (ui) ui.style.display = 'none';
+    if (sessionCheckTimer) { clearInterval(sessionCheckTimer); sessionCheckTimer = null; }
+    stopTokenRefreshTimer(); stopNotifPolling();
+    if (window.google?.accounts?.id) google.accounts.id.disableAutoSelect();
+    if (activeToast) dismissToast(activeToast);
+    showToast('Signed out — see you soon! 👋', 'success', {duration: 2400});
+    showSection('login-section');
+    if (typeof hideSidebarForLoggedOutUser === 'function') hideSidebarForLoggedOutUser();
+    setTimeout(() => location.reload(), 2600);
+  });
 }
 
 async function handleCredentialResponse(response){
@@ -1521,31 +1753,498 @@ async function handleCredentialResponse(response){
       if(data.role==="admin"||data.role==="super_admin"){enableAdminUI();initNotifications();}
     }else if(data.status==="Rejected"){showToast("Access denied","error");}
     else{showToast("Awaiting admin approval","info");}
-  }catch(e){console.error(e);setLoginLoading(false);showToast("Connection error","error");}
+  }catch(e){if(DEV_MODE) console.error(e);setLoginLoading(false);showToast("Connection error","error");}
 }
 
 window.onload=async function(){
-  if(DEV_MODE){localStorage.setItem("userToken","DEV_TOKEN");document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));document.getElementById('package-section').classList.add('active');showToast('Dev mode','info');return;}
+  // Init offline banner immediately
+  initOfflineBanner();
+
+  if(DEV_MODE){
+    hideSplash();
+    localStorage.setItem("userToken","DEV_TOKEN");
+    document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+    document.getElementById('package-section').classList.add('active');
+    showToast('Dev mode','info');
+    return;
+  }
+
   const token=localStorage.getItem('userToken'),email=localStorage.getItem('userEmail'),role=localStorage.getItem('userRole');
   if(token&&email){
+    const prefs=JSON.parse(localStorage.getItem('userPrefs')||'{}');
+    applyTheme(prefs.theme||'default');
+    // Keep user-info and sidebar HIDDEN until validation completes
+    const ui=document.getElementById('user-info'); if(ui) ui.style.display='none';
+    const sidebar=document.getElementById('desktop-sidebar'); if(sidebar) sidebar.style.display='none';
+    const tabBar=document.getElementById('mobile-tab-bar'); if(tabBar) tabBar.style.display='none';
+    document.body.classList.remove('is-admin');
+    document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+    const loginSec=document.getElementById('login-section');
+    if(loginSec) loginSec.classList.add('active');
+    const bDiv=document.getElementById('buttonDiv'), lUI=document.getElementById('loginLoadingUI');
+    if(bDiv) bDiv.style.display='none';
+    if(lUI){ lUI.style.display='flex'; lUI.querySelector('p').textContent='Resuming session…'; }
+    // Validate token — hide splash only after we know what to show
     const valid=await validateSession();
+    hideSplash();
     if(valid){
-      const prefs=JSON.parse(localStorage.getItem('userPrefs')||'{}');
-      if(prefs.defaultPackage)selectedPackage=prefs.defaultPackage;
-      applyTheme(prefs.theme||'default');
+      if(prefs.defaultPackage) selectedPackage=prefs.defaultPackage;
       displayUserInfo(email.split('@')[0],role||'user');
-      showSection('package-section');
-      if(role==='admin'||role==='super_admin'){enableAdminUI();initNotifications();}
+      if(role==='admin'||role==='super_admin') enableAdminUI();
+      if(role==='admin'||role==='super_admin') initNotifications();
       startSessionMonitoring();
+      showSidebarForLoggedInUser();
+      showSection('package-section');
       showToast(`Welcome back! ${Math.floor(getTimeUntilExpiry()/60)}h left`,'success');
+      initPullToRefresh();
       return;
     }
+    // Session invalid — reset to clean login UI
+    hideSplash();
+    if(bDiv) bDiv.style.display='flex';
+    if(lUI) lUI.style.display='none';
+    hideSidebarForLoggedOutUser();
+    initGoogleSignIn();
+    return;
   }
-  if(window.google?.accounts?.id){
-    google.accounts.id.initialize({client_id:"648943267004-cgsr4bhegtmma2jmlsekjtt494j8cl7f.apps.googleusercontent.com",callback:handleCredentialResponse,auto_select:false,cancel_on_tap_outside:true});
-    google.accounts.id.renderButton(document.getElementById("buttonDiv"),{theme:"outline",size:"large",width:"250"});
-  }else{showToast('Login service unavailable','error');}
+
+  // No stored session — show login
+  hideSplash();
+  initGoogleSignIn();
 };
+
+// Register SW once, outside onload so it always runs
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js', { scope: './' })
+      .then(reg => { if(DEV_MODE) console.log('[SW] Registered', reg); })
+      .catch(err => { if(DEV_MODE) console.warn('[SW] Registration failed', err); });
+  });
+}
+
+// Initialize Google Sign-In — retries until the GSI script is ready
+function initGoogleSignIn(attempt = 0) {
+  if(window.google?.accounts?.id){
+    google.accounts.id.initialize({
+      client_id: '648943267004-cgsr4bhegtmma2jmlsekjtt494j8cl7f.apps.googleusercontent.com',
+      callback: handleCredentialResponse,
+      auto_select: false,
+      cancel_on_tap_outside: true
+    });
+    google.accounts.id.renderButton(
+      document.getElementById('buttonDiv'),
+      { theme: 'outline', size: 'large', width: '250' }
+    );
+  } else if(attempt < 20) {
+    // GSI script not loaded yet — retry every 250ms (up to 5s total)
+    setTimeout(() => initGoogleSignIn(attempt + 1), 250);
+  } else {
+    showToast('Login service unavailable — check your connection', 'error');
+  }
+}
 
 function openImageModal(url){const m=url.match(/[-\w]{25,}/);if(!m){showToast("Invalid link","error");return;}document.getElementById("modalImage").src=`https://drive.google.com/thumbnail?id=${m[0]}&sz=w1200`;document.getElementById("imageModal").style.display="flex";}
 function closeImageModal(){document.getElementById("imageModal").style.display="none";document.getElementById("modalImage").src="";}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DESKTOP SIDEBAR LOGIC
+// ═══════════════════════════════════════════════════════════════════════════
+
+const DESKTOP_BP = 900;
+function isDesktop() { return window.innerWidth >= DESKTOP_BP; }
+
+/* ── Show/hide sidebar shell ── */
+function initDesktopLayout() {
+  const sidebar = document.getElementById('desktop-sidebar');
+  if (!sidebar) return;
+  // Only show sidebar shell on desktop IF the user is already logged in
+  // (pre-login class on body hides it via CSS when not yet authenticated)
+  if (isDesktop() && !document.body.classList.contains('pre-login')) {
+    sidebar.style.display = 'flex';
+    sidebar.style.flexDirection = 'column';
+  } else if (!isDesktop()) {
+    sidebar.style.display = 'none';
+  }
+}
+
+/* ── Reveal nav + footer after login ── */
+function showSidebarForLoggedInUser() {
+  const nav     = document.getElementById('sb-nav');
+  const footer  = document.getElementById('sb-footer');
+  const sidebar = document.getElementById('desktop-sidebar');
+  if (nav)    nav.style.display    = 'flex';
+  if (footer) footer.style.display = 'flex';
+  // Remove pre-login class → sidebar becomes visible on desktop
+  document.body.classList.remove('pre-login');
+  // Show sidebar shell on desktop instantly (no animation)
+  if (sidebar && isDesktop()) {
+    sidebar.style.display = 'flex';
+    sidebar.style.flexDirection = 'column';
+  }
+  // Show mobile tab bar when logged in
+  const tabBar = document.getElementById('mobile-tab-bar');
+  if (tabBar && !isDesktop()) tabBar.style.display = 'flex';
+}
+
+/* ── Hide nav + footer on logout ── */
+function hideSidebarForLoggedOutUser() {
+  const nav    = document.getElementById('sb-nav');
+  const footer = document.getElementById('sb-footer');
+  if (nav)    nav.style.display    = 'none';
+  if (footer) footer.style.display = 'none';
+  // Re-add pre-login class → sidebar hidden again on desktop
+  document.body.classList.add('pre-login');
+  // Hide mobile tab bar
+  const tabBar = document.getElementById('mobile-tab-bar');
+  if (tabBar) tabBar.style.display = 'none';
+}
+
+/* ── Intercept showSection to update active state ── */
+const _origShowSection = showSection;
+window.showSection = function(id) {
+  _origShowSection(id);
+  updateSidebarActiveState(id);
+  // scroll content area back to top on section change
+  const content = document.querySelector('.content');
+  if (content) content.scrollTop = 0;
+};
+
+function updateSidebarActiveState(sectionId) {
+  document.querySelectorAll('.sidebar-nav-item').forEach(el => el.classList.remove('active'));
+
+  // Section → which sidebar item to highlight
+  const map = {
+    'hazardous-form-section':    'sb-haz-log',
+    'hazardous-history-section': 'sb-haz-records',
+    'solid-form-section':        'sb-solid-log',
+    'solid-history-section':     'sb-solid-records',
+    'admin-dashboard':           'sb-admin-dash',
+    'user-management-section':   'sb-admin-users',
+    'analytics-section':         'sb-admin-analytics',
+    'request-logs-section':      'sb-admin-logs',
+    'user-settings-section':     'sb-settings',
+  };
+
+  const targetId = map[sectionId];
+  if (targetId) {
+    const el = document.getElementById(targetId);
+    if (el) el.classList.add('active');
+  }
+
+  // Always keep the current package highlighted
+  if (selectedPackage) {
+    const pkgEl = document.getElementById(`sb-pkg-${selectedPackage.toLowerCase()}`);
+    if (pkgEl) pkgEl.classList.add('active');
+  }
+
+  updateSidebarWasteItems();
+}
+
+function updateSidebarWasteItems() {
+  const hasPackage = !!selectedPackage;
+  const wasteIds = [
+    'sb-waste-divider','sb-haz-label','sb-haz-log','sb-haz-records',
+    'sb-solid-label','sb-solid-log','sb-solid-records'
+  ];
+  wasteIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = hasPackage ? '' : 'none';
+  });
+}
+
+/* ── Sidebar package selection ── */
+function sidebarSelectPackage(pkg) {
+  // Sync the mobile package cards selection state
+  document.querySelectorAll('.package-card').forEach(c => {
+    c.classList.remove('selected');
+    if (c.querySelector('.name')?.textContent.trim() === `Package ${pkg.replace('P','')}`) {
+      c.classList.add('selected');
+    }
+  });
+
+  selectedPackage = pkg;
+  if (typeof updateBreadcrumbs === 'function') updateBreadcrumbs();
+  updateSidebarWasteItems();
+
+  // Highlight sidebar package button
+  ['p4','p5','p6'].forEach(p => {
+    const el = document.getElementById(`sb-pkg-${p}`);
+    if (el) el.classList.toggle('active', `P${p.slice(1).toUpperCase()}` === pkg || `p${p.slice(1)}` === pkg.toLowerCase().slice(1));
+  });
+  // Direct approach — just highlight the right one
+  document.getElementById(`sb-pkg-${pkg.toLowerCase()}`)?.classList.add('active');
+
+  // On desktop skip the redundant package picker, go to waste type
+  if (isDesktop()) {
+    _origShowSection('waste-type-section');
+    updateSidebarActiveState('waste-type-section');
+    const content = document.querySelector('.content');
+    if (content) content.scrollTop = 0;
+  }
+}
+
+/* ── Sidebar shortcut to log/records ── */
+function sidebarNav(type, action) {
+  if (!selectedPackage) { showToast('Please select a package first', 'error'); return; }
+  if (action === 'log') {
+    showLogForm(type);
+  } else {
+    showHistoryView(type);
+  }
+}
+
+/* ── Mirror pending badge to sidebar ── */
+const _origUpdatePendingBadge = updatePendingBadge;
+window.updatePendingBadge = function(count) {
+  _origUpdatePendingBadge(count);
+  // Sidebar badge
+  const sbBadge = document.getElementById('sb-pending-badge');
+  if (sbBadge) {
+    sbBadge.textContent = count > 99 ? '99+' : count;
+    sbBadge.classList.toggle('visible', count > 0);
+  }
+  // #7: Mobile tab bar badge on settings/admin tab
+  const tabBadge = document.querySelector('#tab-settings .tab-badge');
+  if (tabBadge) {
+    tabBadge.textContent = count > 99 ? '99+' : count;
+    tabBadge.classList.toggle('visible', count > 0);
+  }
+};
+
+/* ── After login: reveal sidebar nav & footer ── */
+const _origEnableAdminUI = enableAdminUI;
+window.enableAdminUI = function() {
+  _origEnableAdminUI();
+  // admin-only items show via body.is-admin CSS — nothing extra needed
+};
+
+// Hook into the login flow by patching showSection —
+// whenever package-section becomes active it means user is logged in
+const __patched_ss = window.showSection;
+window.showSection = function(id) {
+  __patched_ss(id);
+  if (id === 'package-section' || id === 'admin-dashboard' ||
+      id === 'hazardous-menu-section' || id === 'solid-menu-section') {
+    showSidebarForLoggedInUser();
+  }
+  if (id === 'login-section') {
+    hideSidebarForLoggedOutUser();
+  }
+};
+
+/* ── On resize ── */
+window.addEventListener('resize', () => {
+  initDesktopLayout();
+  const active = document.querySelector('.section.active');
+  if (active) updateSidebarActiveState(active.id);
+  // Show/hide tab bar based on viewport
+  const tabBar = document.getElementById('mobile-tab-bar');
+  const isLoggedIn = !!localStorage.getItem('userToken');
+  if (tabBar) tabBar.style.display = (!isDesktop() && isLoggedIn) ? 'flex' : 'none';
+});
+
+/* ── On DOMContentLoaded ── */
+document.addEventListener('DOMContentLoaded', () => {
+  initDesktopLayout();
+});
+
+/* ═══════════════════════════════════════════════════════
+   #8 — MOBILE TAB BAR NAVIGATION
+═══════════════════════════════════════════════════════ */
+function mobileTabNav(tab) {
+  // Update active tab state
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  const activeBtn = document.getElementById(`tab-${tab}`);
+  if (activeBtn) activeBtn.classList.add('active');
+
+  switch (tab) {
+    case 'home':
+      if (selectedPackage) {
+        _origShowSection('waste-type-section');
+        updateSidebarActiveState('waste-type-section');
+      } else {
+        _origShowSection('package-section');
+        updateSidebarActiveState('package-section');
+      }
+      break;
+    case 'log':
+      if (!selectedPackage) { showToast('Select a package first', 'error'); mobileTabNav('home'); return; }
+      if (selectedWasteType) {
+        showLogForm(selectedWasteType);
+      } else {
+        _origShowSection('waste-type-section');
+      }
+      break;
+    case 'records':
+      if (!selectedPackage) { showToast('Select a package first', 'error'); mobileTabNav('home'); return; }
+      if (selectedWasteType) {
+        showHistoryView(selectedWasteType);
+      } else {
+        _origShowSection('waste-type-section');
+      }
+      break;
+    case 'settings':
+      showUserSettings();
+      break;
+  }
+}
+
+/* ── Keep tab bar active state in sync with showSection ── */
+function updateMobileTabActiveState(sectionId) {
+  const map = {
+    'package-section':          'home',
+    'waste-type-section':       'home',
+    'hazardous-menu-section':   'home',
+    'solid-menu-section':       'home',
+    'hazardous-form-section':   'log',
+    'solid-form-section':       'log',
+    'hazardous-history-section':'records',
+    'solid-history-section':    'records',
+    'user-settings-section':    'settings',
+    'admin-dashboard':          'settings',
+    'user-management-section':  'settings',
+    'analytics-section':        'settings',
+    'request-logs-section':     'settings',
+  };
+  const tabKey = map[sectionId];
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  if (tabKey) {
+    const btn = document.getElementById(`tab-${tabKey}`);
+    if (btn) btn.classList.add('active');
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   #4 — SIDEBAR PACKAGE PILL BADGE
+═══════════════════════════════════════════════════════ */
+function updateSidebarPackagePill(pkg, wasteType) {
+  // Remove all existing pills
+  document.querySelectorAll('.nav-pkg-pill').forEach(p => p.remove());
+  if (!pkg) return;
+
+  const wasteLabel = wasteType === 'hazardous' ? '☢ Haz' : wasteType === 'solid' ? '🗑 Solid' : null;
+  if (!wasteLabel) return;
+
+  const pkgBtn = document.getElementById(`sb-pkg-${pkg.toLowerCase()}`);
+  if (pkgBtn) {
+    const pill = document.createElement('span');
+    pill.className = 'nav-pkg-pill visible';
+    pill.textContent = wasteLabel;
+    pkgBtn.appendChild(pill);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   #10 — FORM AUTO-FILL LAST USED VALUES
+═══════════════════════════════════════════════════════ */
+const AUTOFILL_KEY = 'wms_last_form_values';
+
+function saveLastFormValues(type, values) {
+  try {
+    const stored = JSON.parse(localStorage.getItem(AUTOFILL_KEY) || '{}');
+    stored[type] = { ...stored[type], ...values, savedAt: Date.now() };
+    localStorage.setItem(AUTOFILL_KEY, JSON.stringify(stored));
+  } catch(e) {}
+}
+
+function loadLastFormValues(type) {
+  try {
+    const stored = JSON.parse(localStorage.getItem(AUTOFILL_KEY) || '{}');
+    return stored[type] || null;
+  } catch(e) { return null; }
+}
+
+function applyFormAutofill(type) {
+  const last = loadLastFormValues(type);
+  if (!last) return;
+  // Only apply if saved within the last 7 days
+  if (Date.now() - (last.savedAt || 0) > 7 * 24 * 60 * 60 * 1000) return;
+
+  if (type === 'hazardous') {
+    const wasteEl = document.getElementById('hazardous-waste');
+    if (wasteEl && last.waste && !wasteEl.value) wasteEl.value = last.waste;
+    // Always pre-fill today's date if blank
+    const dateEl = document.getElementById('hazardous-date');
+    if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().split('T')[0];
+  } else if (type === 'solid') {
+    const wasteEl = document.getElementById('solid-waste');
+    if (wasteEl && last.waste && !wasteEl.value) wasteEl.value = last.waste;
+    const locEl = document.getElementById('solid-location');
+    if (locEl && last.location && !locEl.value) locEl.value = last.location;
+    const dateEl = document.getElementById('solid-date');
+    if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().split('T')[0];
+  }
+}
+
+/* ── Patch showSection to drive tab bar + pill badge + autofill ── */
+const __patched_ss2 = window.showSection;
+window.showSection = function(id) {
+  __patched_ss2(id);
+  updateMobileTabActiveState(id);
+  // Apply autofill when form sections open
+  if (id === 'hazardous-form-section') applyFormAutofill('hazardous');
+  if (id === 'solid-form-section')     applyFormAutofill('solid');
+  // Update pill badge when waste sections are entered
+  if (id === 'hazardous-form-section' || id === 'hazardous-history-section' || id === 'hazardous-menu-section') {
+    updateSidebarPackagePill(selectedPackage, 'hazardous');
+  } else if (id === 'solid-form-section' || id === 'solid-history-section' || id === 'solid-menu-section') {
+    updateSidebarPackagePill(selectedPackage, 'solid');
+  } else if (id === 'package-section' || id === 'waste-type-section') {
+    updateSidebarPackagePill(null, null);
+  }
+};
+// ═══════════════════════════════════════════════════════════════════════════
+// PULL-TO-REFRESH  (mobile only)
+// ═══════════════════════════════════════════════════════════════════════════
+
+function initPullToRefresh() {
+  const content = document.querySelector('.content');
+  if (!content || window.innerWidth >= 900) return;
+
+  let startY = 0, pulling = false, indicator = null;
+
+  function getIndicator() {
+    if (!indicator) {
+      indicator = document.createElement('div');
+      indicator.id = 'ptr-indicator';
+      indicator.style.cssText = [
+        'position:fixed','top:0','left:0','right:0',
+        'height:0','background:var(--primary-lt)',
+        'display:flex','align-items:center','justify-content:center',
+        'overflow:hidden','transition:height 0.2s','z-index:998',
+        'font-size:0.78rem','font-weight:600','color:var(--primary)',
+        'pointer-events:none'
+      ].join(';');
+      document.body.appendChild(indicator);
+    }
+    return indicator;
+  }
+
+  content.addEventListener('touchstart', e => {
+    if (content.scrollTop === 0) { startY = e.touches[0].clientY; pulling = true; }
+  }, { passive: true });
+
+  content.addEventListener('touchmove', e => {
+    if (!pulling) return;
+    const dist = Math.min(e.touches[0].clientY - startY, 72);
+    if (dist > 0) {
+      getIndicator().style.height = dist + 'px';
+      getIndicator().textContent = dist > 55 ? '↑ Release to refresh' : '↓ Pull to refresh';
+    }
+  }, { passive: true });
+
+  content.addEventListener('touchend', () => {
+    if (!pulling) return;
+    const ind = getIndicator();
+    const dist = parseInt(ind.style.height) || 0;
+    ind.style.height = '0';
+    pulling = false;
+    if (dist > 55) {
+      // Refresh the currently active records section
+      const active = document.querySelector('.section.active');
+      if (active?.id === 'hazardous-history-section') { showToast('Refreshing…','info',{duration:1200}); loadHistory('hazardous'); }
+      else if (active?.id === 'solid-history-section') { showToast('Refreshing…','info',{duration:1200}); loadHistory('solid'); }
+      else if (active?.id === 'user-management-section') { loadUsers(); }
+    }
+  });
+}
